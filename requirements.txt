@@ -1,0 +1,19 @@
+torchvision==0.13.0
+jsonargparse[signatures]
+wandb==0.12.16
+gradio==2.9.4
+pyyaml==5.4.0
+protobuf<4.21.0  # 4.21 breaks with wandb, tensorboard, or pytorch-lightning: https://github.com/protocolbuffers/protobuf/issues/10048
+lightning_hpo
+websockets
+lightning
+opencv-python <= 4.6.0.66
+gdown
+matplotlib>=1.4.3
+Pillow>=2.9.0
+scikit-learn>=0.18
+numpy>=1.9.2
+scikit-image[data] >= 0.19
+tensorflow
+diffusers==0.4.1 
+tensorboard 

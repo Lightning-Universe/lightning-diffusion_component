@@ -8,6 +8,7 @@ import gc
 import lightning as L
 from lightning_app.storage import Drive
 import os
+from lightning.app.storage import Payload
 
 
 def get_filenames_of_path(path_s):

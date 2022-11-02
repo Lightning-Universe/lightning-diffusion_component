@@ -18,6 +18,8 @@ from lightning_app.storage import Drive
 from lightning.app.storage.path import Path
 from subprocess import Popen
 from PIL import Image
+from lightning.app.storage import Payload
+
 
 class Lite(LightningLite):
     

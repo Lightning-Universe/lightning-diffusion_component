@@ -18,10 +18,10 @@ class TrainDeploy(L.LightningFlow):
         self.create_data = Create_Data()
 
         # work to generate prior
-        self.prior =  Prior(self.create_data.drive_1, cloud_compute=L.CloudCompute("gpu"))
+        self.prior =  Prior(self.create_data.drive_1, cloud_compute=L.CloudCompute("cpu"))
 
          # work that trains my model
-        self.train_work = Training(cloud_compute=L.CloudCompute("gpu"))
+        self.train_work = Training(cloud_compute=L.CloudCompute("cpu"))
 
     def run(self):
          # Download pictures of my concept

@@ -3,12 +3,10 @@ import torch
 from diffusers import StableDiffusionPipeline
 from tqdm.auto import tqdm
 from datasets import PromptDataset
-from pathlib import Path
 import gc
 import lightning as L
 from lightning.app.storage import Drive
 import os
-from lightning.app.storage import Payload
 
 
 def get_filenames_of_path(path_s):

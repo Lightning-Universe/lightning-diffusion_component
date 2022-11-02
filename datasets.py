@@ -6,7 +6,6 @@ import torch.utils.checkpoint
 from torch.utils.data import Dataset
 from PIL import Image
 from torchvision import transforms
-from lightning.app.storage import Payload
 
 
 class DreamBoothDataset(Dataset):

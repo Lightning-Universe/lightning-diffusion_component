@@ -6,7 +6,6 @@ import torch
 from pytorch_lightning.lite import LightningLite
 from diffusers import AutoencoderKL, DDPMScheduler, PNDMScheduler, StableDiffusionPipeline, UNet2DConditionModel
 import torch.nn.functional as F
-from torch.utils.tensorboard import SummaryWriter
 from datasets import DreamBoothDataset
 
 from tqdm.auto import tqdm
@@ -18,7 +17,6 @@ from lightning.app.storage import Drive
 from lightning.app.storage.path import Path
 from subprocess import Popen
 from PIL import Image
-from lightning.app.storage import Payload
 
 
 class Lite(LightningLite):

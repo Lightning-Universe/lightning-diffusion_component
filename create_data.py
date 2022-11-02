@@ -49,7 +49,7 @@ class Create_Data(L.LightningWork):
 
         # number of concept examples
         self.number_samples = len((self.drive_1.list()))
-
+        print("done")
         # remove downladed folder
         # shutil.rmtree("MY_FACE")
 

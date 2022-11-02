@@ -51,7 +51,7 @@ class Lite(LightningLite):
             return batch
         
         # start tensorboard
-        writer = SummaryWriter('runs')
+        # writer = SummaryWriter('runs')
 
         # define model
         model = unet

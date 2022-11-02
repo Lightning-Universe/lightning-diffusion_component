@@ -24,6 +24,7 @@ class Prior(L.LightningWork):
 
     def run(self, class_prompt, YOUR_TOKEN="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",sample_batch_size = 2): 
         
+        print("creating classes")
         # type of devie
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -33,6 +34,7 @@ class Prior(L.LightningWork):
 
         # create examples prior
         if cur_class_images < num_class_images:
+            print()
             ## This need to change from hugging face
             pipeline = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4",use_auth_token=YOUR_TOKEN
             ).to(device)

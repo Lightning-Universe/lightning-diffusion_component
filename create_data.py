@@ -14,8 +14,8 @@ def get_filenames_of_path(path_s):
         return filenames
 
 class Create_Data(L.LightningWork):  
-    def __init__(self):
-        super().__init__()
+    def __init__(self,cloud_compute, *args, **kwargs):
+        super().__init__(*args, cloud_compute=cloud_compute, **kwargs)
         # diver for the data
         self.drive_1 = Drive("lit://drive_1")
 

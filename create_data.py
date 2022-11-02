@@ -3,7 +3,7 @@ import os
 from PIL import Image
 import PIL
 import lightning as L
-from lightning_app.storage import Drive
+from lightning.app.storage import Drive
 from lightning.app.storage import Payload
 
 # import shutil

@@ -6,7 +6,7 @@ from datasets import PromptDataset
 from pathlib import Path
 import gc
 import lightning as L
-from lightning_app.storage import Drive
+from lightning.app.storage import Drive
 import os
 from lightning.app.storage import Payload
 

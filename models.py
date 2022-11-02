@@ -14,7 +14,7 @@ from argparse import Namespace
 import os
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
 import lightning as L
-from lightning_app.storage import Drive
+from lightning.app.storage import Drive
 from lightning.app.storage.path import Path
 from subprocess import Popen
 from PIL import Image

@@ -25,7 +25,7 @@ class Create_Data(L.LightningWork):
 
     def run(self, url:str,reshape: bool =  False): 
         # download from the cloud
-        print("/n Downloading data /n")
+        print("\n Downloading data \n")
         gdown.download_folder(url, quiet=True)  
         images = get_filenames_of_path("MY_FACE")
         

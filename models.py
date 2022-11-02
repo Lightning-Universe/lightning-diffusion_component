@@ -135,8 +135,8 @@ class Lite(LightningLite):
                     tepoch.set_postfix(loss=loss.item())
 
                     # update tenorboard
-                    writer.add_scalar("Train/Loss", loss, i)
-                    writer.close()
+                    # writer.add_scalar("Train/Loss", loss, i)
+                    # writer.close()
                 return
 
 
@@ -163,10 +163,10 @@ class Training(L.LightningWork):
         tokenizer = CLIPTokenizer.from_pretrained(pretrained_model_name_or_path,subfolder="tokenizer",use_auth_token=YOUR_TOKEN)
 
         # TENSOR BOAR LAUNCHER
-        log_dir = "runs"
-        self._process = Popen(
-                    f"tensorboard --logdir='{log_dir}' --host {self.host} --port {self.port}",
-                    shell=True)
+        # log_dir = "runs"
+        # self._process = Popen(
+        #             f"tensorboard --logdir='{log_dir}' --host {self.host} --port {self.port}",
+        #             shell=True)
 
 
         # make local folders for training 

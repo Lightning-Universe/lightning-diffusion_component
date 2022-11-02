@@ -5,11 +5,9 @@ import warnings
 warnings.simplefilter("ignore")
 from create_data import Create_Data
 import os
-#from Prior_Preservation import Prior
+from Prior_Preservation import Prior
 from argparse import Namespace
-#from models import Training
-import torch
-
+from models import Training
 
 
 class TrainDeploy(L.LightningFlow):
@@ -19,19 +17,19 @@ class TrainDeploy(L.LightningFlow):
         # work that gets the data
         self.create_data = Create_Data()
 
-        # # work to generate prior
-        # self.prior =  Prior(self.create_data.drive_1, cloud_compute=L.CloudCompute("gpu"))
+        # work to generate prior
+        self.prior =  Prior(self.create_data.drive_1, cloud_compute=L.CloudCompute("gpu"))
 
-        #  # work that trains my model
-        # self.train_work = Training(cloud_compute=L.CloudCompute("gpu"))
+         # work that trains my model
+        self.train_work = Training(cloud_compute=L.CloudCompute("gpu"))
 
     def run(self):
          # Download pictures of my concept
         url = "https://drive.google.com/drive/folders/1PzdEZ0u87yxoy5cAMk12tJe0gE2LtYUA?usp=sharing"
         self.create_data.run(url=url)
 
-    #     # Create previous  examples
-    #     self.prior.run("a photo of a Daniela person")
+        # Create previous  examples
+        self.prior.run("a photo of a Daniela person")
 
         
     # # arguments for training

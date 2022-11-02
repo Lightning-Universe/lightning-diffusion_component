@@ -51,6 +51,7 @@ class Prior(L.LightningWork):
             # generate the examples
             for example in tqdm(sample_dataloader, desc="Generating class images"):
                 # example genration
+                print("creating classes")
                 images = pipeline(example["prompt"])
                 # get image
                 images = images["sample"]

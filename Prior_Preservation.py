@@ -22,7 +22,7 @@ class Prior(L.LightningWork):
         self.drive_1 = drive
         self.drive_2 = Drive("lit://drive_2")
 
-    def run(self, class_prompt, YOUR_TOKEN="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",sample_batch_size = 2): 
+    def run(self, class_prompt, YOUR_TOKEN="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",sample_batch_size = 2): 
         
         print("creating classes")
         # type of devie

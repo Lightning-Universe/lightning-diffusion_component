@@ -153,7 +153,7 @@ class Training(L.LightningWork):
         
          # parameter to download from HF (Need to change this)
         pretrained_model_name_or_path = "CompVis/stable-diffusion-v1-4" #@param {type:"string"}
-        YOUR_TOKEN="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"
+        YOUR_TOKEN="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"
     
         
         # get the models

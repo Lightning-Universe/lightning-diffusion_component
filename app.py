@@ -18,10 +18,10 @@ class TrainDeploy(L.LightningFlow):
         self.create_data = Create_Data(cloud_compute=L.CloudCompute("cpu",disk_size=30))
 
         # work to generate prior
-        self.prior =  Prior(self.create_data.drive_1, cloud_compute=L.CloudCompute("cpu",disk_size=30))
+        self.prior =  Prior(self.create_data.drive_1, cloud_compute=L.CloudCompute("gpu",disk_size=60))
 
          # work that trains my model
-        self.train_work = Training(cloud_compute=L.CloudCompute("cpu",disk_size=30))
+        self.train_work = Training(cloud_compute=L.CloudCompute("cpu",disk_size=60))
 
     def run(self):
          # Download pictures of my concept
@@ -29,7 +29,7 @@ class TrainDeploy(L.LightningFlow):
         self.create_data.run(url=url)
 
         # Create previous  examples
-        self.prior.run("a photo of a Daniela person")
+        self.prior.run("photo of a Daniela person ultra detailed")
 
         
     # arguments for training
@@ -43,7 +43,7 @@ class TrainDeploy(L.LightningFlow):
             # Folder of my concept
                         instance_data_dir= self.create_data.drive_1,
             # My concept text prompt
-                        instance_prompt="a photo of Daniela person" ,
+                        instance_prompt="photo of a Daniela person ultra detailed",
             # learning rate
                         learning_rate=5e-06,
             # batch size
@@ -57,7 +57,7 @@ class TrainDeploy(L.LightningFlow):
             # Prior folder
                         class_data_dir=self.prior.drive_2, 
             # prior text prompt
-                        class_prompt="a photo of a sks person", 
+                        class_prompt="photo of a sks person ultra detailed", 
             # number of examples
                         num_class_images=self.create_data.number_samples, 
             # folder to store re-trained mode;

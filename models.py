@@ -216,6 +216,7 @@ class Training(L.LightningWork):
             else:
                 for j in list(i.iterdir()):
                     self.drive_3.put(str(j))
+        print("DONE training ")
 
 
 

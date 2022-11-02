@@ -32,42 +32,42 @@ class TrainDeploy(L.LightningFlow):
         self.prior.run("a photo of a Daniela person")
 
         
-    # # arguments for training
-    #     args = Namespace(
-    #         # Model Download Folder
-    #                     pretrained_model_name_or_path="CompVis/stable-diffusion-v1-4" ,
-    #         # image Resolution
-    #                     resolution=512,
-    #         # Image transformation
-    #                     center_crop=True,
-    #         # Folder of my concept
-    #                     instance_data_dir= self.create_data.drive_1,
-    #         # My concept text prompt
-    #                     instance_prompt="a photo of Daniela person" ,
-    #         # learning rate
-    #                     learning_rate=5e-06,
-    #         # batch size
-    #                     train_batch_size=1,
-    #         # use 8bit optimizer from bitsandbytes
-    #                     use_8bit_adam=True, 
-    #         # Prior preservation
-    #                     with_prior_preservation=True, 
-    #         # Prior weight
-    #                     prior_loss_weight=1,
-    #         # Prior folder
-    #                     class_data_dir=self.prior.drive_2, 
-    #         # prior text prompt
-    #                     class_prompt="a photo of a sks person", 
-    #         # number of examples
-    #                     num_class_images=self.create_data.number_samples, 
-    #         # folder to store re-trained mode;
-    #                     output_dir="dreambooth-concept",
-    #         # num epochs
-    #                     num_epochs = 1)
+    # arguments for training
+        args = Namespace(
+            # Model Download Folder
+                        pretrained_model_name_or_path="CompVis/stable-diffusion-v1-4" ,
+            # image Resolution
+                        resolution=512,
+            # Image transformation
+                        center_crop=True,
+            # Folder of my concept
+                        instance_data_dir= self.create_data.drive_1,
+            # My concept text prompt
+                        instance_prompt="a photo of Daniela person" ,
+            # learning rate
+                        learning_rate=5e-06,
+            # batch size
+                        train_batch_size=1,
+            # use 8bit optimizer from bitsandbytes
+                        use_8bit_adam=True, 
+            # Prior preservation
+                        with_prior_preservation=True, 
+            # Prior weight
+                        prior_loss_weight=1,
+            # Prior folder
+                        class_data_dir=self.prior.drive_2, 
+            # prior text prompt
+                        class_prompt="a photo of a sks person", 
+            # number of examples
+                        num_class_images=self.create_data.number_samples, 
+            # folder to store re-trained mode;
+                        output_dir="dreambooth-concept",
+            # num epochs
+                        num_epochs = 1)
 
 
-    #     # run training
-    #     self.train_work.run(args)
+        # run training
+        self.train_work.run(args)
         
     # def configure_layout(self):
     #     tab_1 = {"name": "Model training", "content": self.train_work}

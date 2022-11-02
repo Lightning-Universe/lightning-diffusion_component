@@ -15,13 +15,13 @@ class TrainDeploy(L.LightningFlow):
         super().__init__()
 
         # work that gets the data
-        self.create_data = Create_Data()
+        self.create_data = Create_Data(cloud_compute=L.CloudCompute("cpu",disk_size=30))
 
         # work to generate prior
-        self.prior =  Prior(self.create_data.drive_1, cloud_compute=L.CloudCompute("cpu"))
+        self.prior =  Prior(self.create_data.drive_1, cloud_compute=L.CloudCompute("cpu",disk_size=30))
 
          # work that trains my model
-        self.train_work = Training(cloud_compute=L.CloudCompute("cpu"))
+        self.train_work = Training(cloud_compute=L.CloudCompute("cpu",disk_size=30))
 
     def run(self):
          # Download pictures of my concept

@@ -14,17 +14,17 @@ class TrainDeploy(L.LightningFlow):
     def __init__(self):
         super().__init__()
 
-        # work that gets the data
+        #work that gets the data
         self.create_data = Create_Data(cloud_compute=L.CloudCompute("cpu",disk_size=30))
 
         # work to generate prior
         self.prior =  Prior(self.create_data.drive_1, cloud_compute=L.CloudCompute("gpu",disk_size=60))
 
          # work that trains my model
-        self.train_work = Training(cloud_compute=L.CloudCompute("cpu",disk_size=60))
+        self.train_work = Training(cloud_compute=L.CloudCompute("cpu",disk_size=90))
 
     def run(self):
-         # Download pictures of my concept
+        #Download pictures of my concept
         url = "https://drive.google.com/drive/folders/1PzdEZ0u87yxoy5cAMk12tJe0gE2LtYUA?usp=sharing"
         self.create_data.run(url=url)
 
@@ -55,11 +55,11 @@ class TrainDeploy(L.LightningFlow):
             # Prior weight
                         prior_loss_weight=1,
             # Prior folder
-                        class_data_dir=self.prior.drive_2, 
+                        class_data_dir= self.prior.drive_2, 
             # prior text prompt
                         class_prompt="photo of a sks person ultra detailed", 
             # number of examples
-                        num_class_images=self.create_data.number_samples, 
+                        num_class_images= self.create_data.number_samples, 
             # folder to store re-trained mode;
                         output_dir="dreambooth-concept",
             # num epochs

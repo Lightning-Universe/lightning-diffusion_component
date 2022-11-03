@@ -17,7 +17,7 @@ from lightning.app.storage import Drive
 from lightning.app.storage.path import Path
 from subprocess import Popen
 from PIL import Image
-
+from torchsummary import summary
 
 class Lite(LightningLite):
     
@@ -169,7 +169,7 @@ class Training(L.LightningWork):
         #             shell=True)
 
 
-        # make local folders for training 
+        #make local folders for training 
         if not os.path.exists("class_data_dir"):
             os.makedirs("class_data_dir")
 

@@ -17,6 +17,7 @@ from lightning.app.storage import Drive
 from lightning.app.storage.path import Path
 from subprocess import Popen
 from PIL import Image
+from torchsummary import summary
 
 class Lite(LightningLite):
     

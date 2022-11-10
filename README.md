@@ -1,4 +1,4 @@
-This app dowload the data from a google drive foilder, then creates the priors (for testing this priors are the result of 4 denoising steps), trains the model (for testing I'm just runing one epoch) and launches a gradio server with the retrained model.
+This app downloads the data from a google drive folder, then creates the priors (for testing these priors are the result of 4 denoising steps), trains the model (for testing I'm just running one epoch), and launches a gradio server with the retrained model.
 
 __________
 # Usage:

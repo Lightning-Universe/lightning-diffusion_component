@@ -7,5 +7,5 @@ __________
 lightning run app app.py --cloud
 
 # Using GPU
-lightning run app demo_app.py --cloud --env LIGHTNING_JUPYTER_LAB_COMPUTE=gpu
+lightning run app demo_app.py --cloud --env CLOUD_COMPUTE=gpu
 ```

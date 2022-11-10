@@ -22,8 +22,8 @@ class TrainDeploy(L.LightningFlow):
         self.prior =  Prior(cloud_compute=L.CloudCompute("gpu",disk_size=30,idle_timeout=30))
 
          # work that trains my model
-        self.train_work = Training(cloud_compute=L.CloudCompute("cpu-medium",
-        disk_size=30))
+        self.train_work = Training(cloud_compute=L.CloudCompute(os.getenv("LIGHTNING_JUPYTER_LAB_COMPUTE", "cpu-medium"),
+        disk_size=30,idle_timeout=60))
 
         # UI 
         self.UI =  ImageServeGradio(L.CloudCompute("gpu",disk_size=30))

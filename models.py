@@ -61,14 +61,15 @@ class Lite(LightningLite):
         # start tensorboard
         # writer = SummaryWriter('runs')
 
-        # define model
-        unet.enable_gradient_checkpointing()
+        # Enable Checkpointing on inet to reduce memory usage
+        unet.enable_gradient_checkpointing() 
 
 
         # define optimezer
         optimizer = torch.optim.AdamW(
                     unet.parameters(),  # only optimize unet
                     lr=args.learning_rate)
+
         unet, optimizer = self.setup(unet, optimizer)  # Scale your model / optimizers
 
 
@@ -100,7 +101,7 @@ class Lite(LightningLite):
         # time_bckp = 0
         # time_step = 0
 
-        # move to GPU
+        # move to GPU 
         vae = vae.to(dev)
         text_encoder = text_encoder.to(dev)
 
@@ -121,6 +122,7 @@ class Lite(LightningLite):
                    
 
                     bsz = latents.shape[0]
+
                     # Sample a random timestep for each image
                     timesteps = torch.randint(
                         0, noise_scheduler.config.num_train_timesteps, (bsz,), device=latents.device
@@ -137,11 +139,14 @@ class Lite(LightningLite):
                     
 
                     # Sample noise that we'll add to the latents
+
                     #start_time = time.time()
+
+                    # generate random noise
                     noise = torch.randn(latents.shape).to(latents.device)
+
                     # Add noise to the latents according to the noise magnitude at each timestep
                     # (this is the forward diffusion process)
-
                     noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
 
                     #time_noise_s += (time.time() - start_time)
@@ -150,7 +155,6 @@ class Lite(LightningLite):
                     # Predict the noise residual
 
                     #start_time = time.time()
-
                     #Initial_memory = torch.cuda.memory_allocated(dev)
 
                     noise_pred = unet(noisy_latents, timesteps, encoder_hidden_states)["sample"]
@@ -184,8 +188,6 @@ class Lite(LightningLite):
 
                     self.backward(loss)  # instead of loss.backward()
 
-                    #print('Allocated backwards:', round(torch.cuda.memory_allocated(0)/1024**3,1), 'GB')
-        
                     # memory_consumed_bckp = Initial_memory-torch.cuda.memory_allocated(dev)
                     # time_bckp += (time.time() - start_time)
                     
@@ -202,6 +204,8 @@ class Lite(LightningLite):
                     # update tenorboard
                     # writer.add_scalar("Train/Loss", loss, i)
                     # writer.close()
+
+
                 # num = len(tepoch)*(epoch+1)
                 # file = open('times.json', 'w+')
                 # data = {"time_unet":time_unet/num,
@@ -271,10 +275,13 @@ class Training(L.LightningWork):
         # update folders in the  arguments
         args.class_data_dir = self.data_dir
         args.instance_data_dir= self.prior_dir
-
+        
+        
+        strategy_training = "deepspeed_stage_2_offload" if torch.cuda.is_available() else "ddp"
+        
         # trianing
-        Lite( devices="auto", accelerator="cpu", 
-            strategy="ddp").run(unet,tokenizer,vae,text_encoder,args,device)
+        Lite( devices="auto", accelerator="auto", 
+            strategy=strategy_training).run(unet,tokenizer,vae,text_encoder,args,device)
         
         # update pipeline and save it currently in HF
         pipeline = StableDiffusionPipeline(

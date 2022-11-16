@@ -20,14 +20,14 @@ class DreamBoothDataset(Dataset):
         center_crop=False,
     ):
         self.size = size # image size
-        self.center_crop = center_crop 
+        self.center_crop = center_crop
         self.tokenizer = tokenizer
 
         # check if image folder exist
         self.instance_data_root = Path(instance_data_root)
         if not self.instance_data_root.exists():
             raise ValueError("Instance images root doesn't exists.")
-        
+
         # image names
         self.instance_images_path = list(Path(instance_data_root).iterdir())
         # number of images
@@ -93,7 +93,7 @@ class DreamBoothDataset(Dataset):
                 truncation=True,
                 max_length=self.tokenizer.model_max_length,
             ).input_ids
-        
+
         return example
 
 # data set of the text

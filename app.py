@@ -1,5 +1,4 @@
 import lightning as L
-#from quick_start.components import  ImageServeGradio, PLTracerPythonScript
 
 import warnings
 warnings.simplefilter("ignore")
@@ -66,13 +65,21 @@ class TrainDeploy(L.LightningFlow):
 
        # run training
         self.train_work.run(self.create_data.data_dir,self.prior.prior_dir,args)
-    
+
         # run UI
         self.UI.run(self.train_work.checkpoint_dir)
-        
+
     def configure_layout(self):
         tab_1 = {"name": "Image Generator", "content": self.UI}
         return [tab_1]
+
+
+class DreamboothFinetunner(L.LightningWork):
+
+    def __init__(
+        self,
+        image_urls: List[]    
+    )
 
 app = L.LightningApp(TrainDeploy())
 

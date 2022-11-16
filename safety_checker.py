@@ -3,12 +3,8 @@
 import os
 from typing import List, Optional
 
-import lightning as L
 import torch
-from lightning import BuildConfig, LightningWork
-from lightning.app.storage import Drive
 from torch.utils.data import DataLoader, Dataset
-
 
 NSFW_PROMPTS = [
     "nudity",
@@ -50,58 +46,40 @@ class TextPromptDataset(Dataset):
         return len(self.prompts)
 
 
-class SafetyCheckerBuildConfig(BuildConfig):
-    def build_commands(self) -> List[str]:
-        return ["python -m pip install git+https://github.com/openai/CLIP.git"]
+class DefaultSafetyFilter:
+    """The default safety filter.
 
-
-class SafetyCheckerEmbedding(LightningWork):
-    def __init__(self, nsfw_list: Optional[List] = None, drive: Optional[Drive] = None):
-        super().__init__(
-            parallel=False, cloud_compute=L.CloudCompute("cpu-medium"), cloud_build_config=SafetyCheckerBuildConfig()
-        )
-
-        self.drive = drive
-        self.safety_embeddings_filename = "safety_embedding.pt"
-
-    def run(self):
-        import clip as openai_clip
-
-        model, _ = openai_clip.load("ViT-B/32", device="cpu")
-        ds = TextPromptDataset(NSFW_PROMPTS)
-        dl = DataLoader(ds, shuffle=False, batch_size=4, num_workers=os.cpu_count())
-
-        encoded_text = []
-        for batch in dl:
-            text_features = model.encode_text(openai_clip.tokenize(batch))
-            encoded_text.append(text_features)
-
-        encoded_text = torch.vstack(encoded_text)
-        encoded_text = torch.nn.functional.normalize(encoded_text, p=2, dim=1)
-        torch.save(encoded_text, self.safety_embeddings_filename)
-        self.drive.put(self.safety_embeddings_filename)
-
-
-class SafetyChecker:
-    """The default safety checker.
-
-    >>> safety_checker = SafetyChecker(self.safety_embeddings_filename)
-    >>> pil_results = lit_model(some_inputs)
+    >>> safety_filter = SafetyFilter()
+    >>> safety_filter.setup()
     >>> nsfw_content = safety_checker(pil_results)
     >>> for i, nsfw in enumerate(nsfw_content):
             if nsfw:
-                pil_results[i] = Image.open("assets/nsfw-warning.png")
+                ...
     """
-    def __init__(self, embeddings_path):
+    def __init__(self, embeddings_path) -> None:
         import clip as openai_clip
 
         self.model, self.preprocess = openai_clip.load("ViT-B/32", device="cpu")
-        self.text_embeddings = torch.load(embeddings_path)
+        self.nsfw_embeddings = torch.load(embeddings_path)
 
     def __call__(self, images):
         images = torch.stack([self.preprocess(img) for img in images])
         encoded_images = self.model.encode_image(images)
 
         encoded_images = torch.nn.functional.normalize(encoded_images, p=2, dim=1)
-        similarity = torch.mm(encoded_images, self.text_embeddings.transpose(0, 1))
+        similarity = torch.mm(encoded_images, self.nsfw_embeddings.transpose(0, 1))
         return torch.any(similarity > 0.24, dim=1).tolist()
+
+    def setup(self) -> None:
+        import clip as openai_clip
+
+        ds = TextPromptDataset(NSFW_PROMPTS)
+        dl = DataLoader(ds, shuffle=False, batch_size=4, num_workers=os.cpu_count())
+
+        encoded_text = []
+        for batch in dl:
+            text_features = self.model.encode_text(openai_clip.tokenize(batch))
+            encoded_text.append(text_features)
+
+        encoded_text = torch.vstack(encoded_text)
+        self.nsfw_embeddings = torch.nn.functional.normalize(encoded_text, p=2, dim=1)

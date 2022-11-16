@@ -11,6 +11,7 @@ import gc
 import torch.nn.functional as F
 from lightning.app.components import LiteMultiNode
 from functools import partial
+from lightning.app.storage import Path
 
 
 def collate_fn(examples, tokenizer, preservation_prompt):
@@ -50,7 +51,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         pretrained_model_name_or_path: str = "CompVis/stable-diffusion-v1-4",
         revision: Optional[str] = "fp16",
         tokenizer_name: Optional[str] = None,
-        max_steps: int = 1000,
+        max_steps: int = 1,
         prior_loss_weight: float = 1.0,
         train_batch_size: int = 1,
         gradient_accumulation_steps: int = 1,
@@ -138,7 +139,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
 
     def run(self):
 
-        lite = LightningLite(precision=self.precision,  strategy="deepspeed_stage_1")
+        lite = LightningLite(precision=self.precision,  strategy="deepspeed_stage_2")
 
         if self.seed is not None:
             L.seed_everything(self.seed)
@@ -242,20 +243,22 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         vae = vae.to(device=lite.device, dtype=dtype)
         text_encoder = text_encoder.to(device=lite.device, dtype=dtype)
 
-        total_batch_size = self.train_batch_size * world_size
-
         step = 0
 
         unet.train()
 
-        while step < (self.max_steps / total_batch_size):
+        while step < self.max_steps:
 
             unet.train()
 
             for batch in train_dataloader:
 
                 # Accumulate gradient `gradient_accumulation_steps` batches at a time
-                is_accumulating = step % self.gradient_accumulation_steps != 0
+                if self.gradient_accumulation_steps > 1:
+                    is_accumulating = step % self.gradient_accumulation_steps != 0
+
+                else:
+                    is_accumulating = False
 
                 with lite.no_backward_sync(unet, enabled=is_accumulating):
 
@@ -315,9 +318,12 @@ class _DreamBoothFineTunerWork(L.LightningWork):
                 self.pretrained_model_name_or_path,
                 unet=unet.module, # TODO: Add un-wrapping.
                 text_encoder=text_encoder,
-                revision=lite.revision,
+                revision=self.revision,
+                use_auth_token=self.use_auth_token,
             )
             pipeline.save_pretrained("model.pt")
+
+            self.model_path = Path("model.pt")
 
 
 
@@ -395,16 +401,9 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         del pipeline
         with torch.no_grad():
           torch.cuda.empty_cache()
-        
-        pipe = StableDiffusionPipeline.from_pretrained(
-        args.output_dir,
-        torch_dtype=torch.float16,
-        ).to("cuda")
-
-        
 
 
-class DreamBoothFineTuner(LiteMulgittiNode):
+class DreamBoothFineTuner(LiteMultiNode):
 
     def __init__(
         self,

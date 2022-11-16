@@ -138,12 +138,12 @@ class _DreamBoothFineTunerWork(L.LightningWork):
 
     def run(self):
 
-        lite = LightningLite(precision=self.precision)
+        lite = LightningLite(precision=self.precision,  strategy="deepspeed_stage_1")
 
         if self.seed is not None:
             L.seed_everything(self.seed)
 
-        # self.prepare_data(lite)
+        #self.prepare_data(lite)
 
         # # Load the tokenizer
         tokenizer = CLIPTokenizer.from_pretrained(
@@ -232,8 +232,6 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         )
 
         unet, optimizer = lite.setup(unet, optimizer)  # Scale your model / optimizers
-        vae = lite.setup(vae)
-        text_encoder = lite.setup(text_encoder)
 
         dtype = torch.float32
         if self.precision == 16:
@@ -241,8 +239,8 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         elif self.mixed_precision == "bf16":
             dtype = torch.bfloat16
 
-        vae = vae.to(dtype=dtype)
-        text_encoder = text_encoder.to(dtype=dtype)
+        vae = vae.to(device=lite.device, dtype=dtype)
+        text_encoder = text_encoder.to(device=lite.device, dtype=dtype)
 
         total_batch_size = self.train_batch_size * world_size
 
@@ -299,6 +297,8 @@ class _DreamBoothFineTunerWork(L.LightningWork):
                         loss = loss + self.prior_loss_weight * prior_loss
                     else:
                         loss = F.mse_loss(noise_pred.float(), noise.float(), reduction="mean")
+
+                    print(loss)
 
                     lite.backward(loss)
 
@@ -395,9 +395,16 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         del pipeline
         with torch.no_grad():
           torch.cuda.empty_cache()
+        
+        pipe = StableDiffusionPipeline.from_pretrained(
+        args.output_dir,
+        torch_dtype=torch.float16,
+        ).to("cuda")
+
+        
 
 
-class DreamBoothFineTuner(LiteMultiNode):
+class DreamBoothFineTuner(LiteMulgittiNode):
 
     def __init__(
         self,

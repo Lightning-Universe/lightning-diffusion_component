@@ -4,14 +4,40 @@ from typing import List, Optional
 from datasets import DreamBoothDataset, PromptDataset
 import os
 import torch
-from diffusers import AutoencoderKL, DDPMScheduler, PNDMScheduler, StableDiffusionPipeline, UNet2DConditionModel
-from transformers import CLIPFeatureExtractor, CLIPTextModel, CLIPTokenizer
+from diffusers import AutoencoderKL, DDPMScheduler, StableDiffusionPipeline, UNet2DConditionModel
+from transformers import CLIPTextModel, CLIPTokenizer
 import requests
 import gc
-import math
+import torch.nn.functional as F
 from lightning.app.components import LiteMultiNode
+from functools import partial
 
 
+def collate_fn(examples, tokenizer, preservation_prompt):
+    input_ids = [example["instance_prompt_ids"] for example in examples]
+    pixel_values = [example["instance_images"] for example in examples]
+
+    # Concat class and instance examples for prior preservation.
+    # We do this to avoid doing two forward passes.
+    if preservation_prompt:
+        input_ids += [example["class_prompt_ids"] for example in examples]
+        pixel_values += [example["class_images"] for example in examples]
+
+    pixel_values = torch.stack(pixel_values)
+    pixel_values = pixel_values.to(memory_format=torch.contiguous_format).float()
+
+    input_ids = tokenizer.pad(
+        {"input_ids": input_ids},
+        padding="max_length",
+        max_length=tokenizer.model_max_length,
+        return_tensors="pt",
+    ).input_ids
+
+    batch = {
+        "input_ids": input_ids,
+        "pixel_values": pixel_values,
+    }
+    return batch
 
 
 class _DreamBoothFineTunerWork(L.LightningWork):
@@ -39,6 +65,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         gradient_checkpointing: bool = True,
         cloud_compute: L.CloudCompute = L.CloudCompute("gpu"),
         resolution: int = 512,
+        scale_lr: bool = True,
         center_crop: bool = True,
         **kwargs,
     ):
@@ -96,9 +123,10 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         self.seed = seed
         self.resolution = resolution
         self.center_crop = center_crop
+        self.scale_lr = scale_lr
 
         # Captured at the end of the training.
-        self.best_model_path = None
+        self.model_path = None
 
     @property
     def user_images_data_dir(self) -> str:
@@ -110,7 +138,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
 
     def run(self):
 
-        lite = LightningLite(precision=self.precision, devices="auto")
+        lite = LightningLite(precision=self.precision)
 
         if self.seed is not None:
             L.seed_everything(self.seed)
@@ -142,10 +170,13 @@ class _DreamBoothFineTunerWork(L.LightningWork):
             self.pretrained_model_name_or_path,
             subfolder="unet",
             revision=self.revision,
+            torch_dtype=torch.float32,
             use_auth_token=self.use_auth_token,
         )
 
+        # Freeze the var and text encoder
         vae.requires_grad_(False)
+        text_encoder.requires_grad_(False)
 
         if self.gradient_checkpointing:
             unet.enable_gradient_checkpointing()
@@ -176,11 +207,15 @@ class _DreamBoothFineTunerWork(L.LightningWork):
             lr=self.learning_rate,
         )
 
-        noise_scheduler = DDPMScheduler.from_config(self.pretrained_model_name_or_path, subfolder="scheduler")
+        noise_scheduler = DDPMScheduler.from_config(
+            self.pretrained_model_name_or_path,
+            subfolder="scheduler",
+            use_auth_token=self.use_auth_token,
+        )
 
         train_dataset = DreamBoothDataset(
             instance_data_root=self.user_images_data_dir,
-            instance_prompt=self.instance_prompt,
+            instance_prompt=self.prompt,
             class_data_root=self.preservation_images_data_dir if self.preservation_prompt else None,
             class_prompt=self.preservation_prompt,
             tokenizer=tokenizer,
@@ -188,87 +223,68 @@ class _DreamBoothFineTunerWork(L.LightningWork):
             center_crop=self.center_crop,
         )
 
-        def collate_fn(examples):
-            input_ids = [example["instance_prompt_ids"] for example in examples]
-            pixel_values = [example["instance_images"] for example in examples]
-
-            # Concat class and instance examples for prior preservation.
-            # We do this to avoid doing two forward passes.
-            if self.preservation_prompt:
-                input_ids += [example["class_prompt_ids"] for example in examples]
-                pixel_values += [example["class_images"] for example in examples]
-
-            pixel_values = torch.stack(pixel_values)
-            pixel_values = pixel_values.to(memory_format=torch.contiguous_format).float()
-
-            input_ids = tokenizer.pad(
-                {"input_ids": input_ids},
-                padding="max_length",
-                max_length=tokenizer.model_max_length,
-                return_tensors="pt",
-            ).input_ids
-
-            batch = {
-                "input_ids": input_ids,
-                "pixel_values": pixel_values,
-            }
-            return batch
-
         train_dataloader = torch.utils.data.DataLoader(
             train_dataset,
             batch_size=self.train_batch_size,
             shuffle=True,
-            collate_fn=collate_fn,
+            collate_fn=partial(collate_fn, tokenizer=tokenizer, preservation_prompt=self.preservation_prompt),
             num_workers=1,
         )
 
-        # lr_scheduler = get_scheduler(
-        #     self.lr_scheduler,
-        #     optimizer=optimizer,
-        #     num_warmup_steps=args.lr_warmup_steps * args.gradient_accumulation_steps,
-        #     num_training_steps=args.max_train_steps * args.gradient_accumulation_steps,
-        # )
-
         unet, optimizer = lite.setup(unet, optimizer)  # Scale your model / optimizers
+        vae = lite.setup(vae)
+        text_encoder = lite.setup(text_encoder)
 
-        # # Move text_encoder and vae to gpu.
-        # # For mixed precision training we cast the text_encoder and vae weights to half-precision
-        # # as these models are only used for inference, keeping weights in full precision is not required.
-        vae.to(lite.device)
+        dtype = torch.float32
+        if self.precision == 16:
+            dtype = torch.float16
+        elif self.mixed_precision == "bf16":
+            dtype = torch.bfloat16
 
-        total_batch_size = self.train_batch_size * world_size * self.gradient_accumulation_steps
+        vae = vae.to(dtype=dtype)
+        text_encoder = text_encoder.to(dtype=dtype)
 
-        global_step = 0
+        total_batch_size = self.train_batch_size * world_size
+
+        step = 0
 
         unet.train()
 
-        while global_step < (self.max_steps / total_batch_size):
+        while step < (self.max_steps / total_batch_size):
+
             unet.train()
 
-            for step, batch in enumerate(train_dataloader):
-                with accelerator.accumulate(unet):
-                    # Convert images to latent space
-                    latents = vae.encode(batch["pixel_values"].to(dtype=weight_dtype)).latent_dist.sample()
-                    latents = latents * 0.18215
+            for batch in train_dataloader:
+
+                # Accumulate gradient `gradient_accumulation_steps` batches at a time
+                is_accumulating = step % self.gradient_accumulation_steps != 0
+
+                with lite.no_backward_sync(unet, enabled=is_accumulating):
+
+                    with torch.no_grad():
+                        # Convert images to latent space
+                        latents = vae.encode(batch["pixel_values"].to(lite.device, dtype=dtype)).latent_dist.sample()
+                        latents = latents * 0.18215
 
                     # Sample noise that we'll add to the latents
-                    noise = torch.randn_like(latents)
+                    noise = torch.randn_like(latents, device=lite.device, dtype=dtype)
                     bsz = latents.shape[0]
+
                     # Sample a random timestep for each image
-                    timesteps = torch.randint(0, noise_scheduler.config.num_train_timesteps, (bsz,), device=latents.device)
-                    timesteps = timesteps.long()
+                    timesteps = torch.randint(0, noise_scheduler.config.num_train_timesteps, (bsz,), device=lite.device).long()
 
                     # Add noise to the latents according to the noise magnitude at each timestep
                     # (this is the forward diffusion process)
                     noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
 
-                    # Get the text embedding for conditioning
-                    encoder_hidden_states = text_encoder(batch["input_ids"])[0]
+                    with torch.no_grad():
+                        # Get the text embedding for conditioning
+                        encoder_hidden_states = text_encoder(batch["input_ids"].to(lite.device))[0]
 
                     # Predict the noise residual
                     noise_pred = unet(noisy_latents, timesteps, encoder_hidden_states).sample
 
-                    if args.with_prior_preservation:
+                    if self.preservation_prompt:
                         # Chunk the noise and noise_pred into two parts and compute the loss on each part separately.
                         noise_pred, noise_pred_prior = torch.chunk(noise_pred, 2, dim=0)
                         noise, noise_prior = torch.chunk(noise, 2, dim=0)
@@ -280,50 +296,29 @@ class _DreamBoothFineTunerWork(L.LightningWork):
                         prior_loss = F.mse_loss(noise_pred_prior.float(), noise_prior.float(), reduction="mean")
 
                         # Add the prior loss to the instance loss.
-                        loss = loss + args.prior_loss_weight * prior_loss
+                        loss = loss + self.prior_loss_weight * prior_loss
                     else:
                         loss = F.mse_loss(noise_pred.float(), noise.float(), reduction="mean")
 
-                    accelerator.backward(loss)
-                    if accelerator.sync_gradients:
-                        params_to_clip = (
-                            itertools.chain(unet.parameters(), text_encoder.parameters())
-                            if args.train_text_encoder
-                            else unet.parameters()
-                        )
-                        accelerator.clip_grad_norm_(params_to_clip, args.max_grad_norm)
+                    lite.backward(loss)
+
+                # Step the optimizer every 8 batches
+                if not is_accumulating:
                     optimizer.step()
-                    lr_scheduler.step()
                     optimizer.zero_grad()
 
-                # Checks if the accelerator has performed an optimization step behind the scenes
-                if accelerator.sync_gradients:
-                    progress_bar.update(1)
-                    global_step += 1
-
-                logs = {"loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
-                progress_bar.set_postfix(**logs)
-                accelerator.log(logs, step=global_step)
-
-                if global_step >= args.max_train_steps:
-                    break
-
-        #     accelerator.wait_for_everyone()
+                step += 1
 
         # # Create the pipeline using using the trained modules and save it.
-        # if accelerator.is_main_process:
-        #     pipeline = StableDiffusionPipeline.from_pretrained(
-        #         args.pretrained_model_name_or_path,
-        #         unet=accelerator.unwrap_model(unet),
-        #         text_encoder=accelerator.unwrap_model(text_encoder),
-        #         revision=args.revision,
-        #     )
-        #     pipeline.save_pretrained(args.output_dir)
+        if lite.is_global_zero:
+            pipeline = StableDiffusionPipeline.from_pretrained(
+                self.pretrained_model_name_or_path,
+                unet=unet.module, # TODO: Add un-wrapping.
+                text_encoder=text_encoder,
+                revision=lite.revision,
+            )
+            pipeline.save_pretrained("model.pt")
 
-        #     if args.push_to_hub:
-        #         repo.push_to_hub(commit_message="End of training", blocking=False, auto_lfs_prune=True)
-
-        # accelerator.end_training()
 
 
     def prepare_data(self, lite):

@@ -13,4 +13,6 @@ tensorflow
 diffusers==0.4.1 
 tensorboard 
 transformers
-DeepSpeed 
+deepspeed 
+bitsandbytes
+ftfy

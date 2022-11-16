@@ -1,3 +1,6 @@
+.idea/
+.lightning
+__pycache__
 # project
 .DS_Store
 run_configs/

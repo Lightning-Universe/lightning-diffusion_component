@@ -1,4 +1,3 @@
-
 from diffusers import AutoencoderKL, DDPMScheduler, PNDMScheduler, StableDiffusionPipeline, UNet2DConditionModel
 from transformers import CLIPFeatureExtractor, CLIPTextModel, CLIPTokenizer
 

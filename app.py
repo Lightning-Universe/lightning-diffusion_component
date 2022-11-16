@@ -74,12 +74,5 @@ class TrainDeploy(L.LightningFlow):
         return [tab_1]
 
 
-class DreamboothFinetunner(L.LightningWork):
-
-    def __init__(
-        self,
-        image_urls: List[]    
-    )
-
 app = L.LightningApp(TrainDeploy())
 

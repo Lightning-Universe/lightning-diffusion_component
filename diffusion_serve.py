@@ -13,18 +13,13 @@ class DiffusionServe(PythonServer):
                  parent_flow: LightningFlow,
                  host: Optional[str] = "127.0.0.1",
                  port: Optional[int] = 7777,
-                 safety_filter=None,
                  **kwargs):
         super().__init__(host=host, port=port, **kwargs)
-        self.parent_flow = parent_flow
-        self.safety_filter = safety_filter
+        self._parent_flow = parent_flow
 
     def setup(self):
-        self.parent_flow.setup()
+        self._parent_flow.setup()
 
     def predict(self, prompt: str):
-        return self.parent_flow.predict(prompt)
-
-
-
+        return self._parent_flow.predict(prompt)
 

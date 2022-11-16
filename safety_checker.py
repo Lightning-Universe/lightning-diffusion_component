@@ -74,7 +74,7 @@ class DefaultSafetyFilter:
         import clip as openai_clip
 
         ds = TextPromptDataset(NSFW_PROMPTS)
-        dl = DataLoader(ds, shuffle=False, batch_size=4, num_workers=os.cpu_count())
+        dl = DataLoader(ds, shuffle=False, batch_size=4)
 
         encoded_text = []
         for batch in dl:

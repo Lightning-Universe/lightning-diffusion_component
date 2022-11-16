@@ -1,6 +1,5 @@
 from pathlib import Path
 from torchvision import transforms
-import torch.utils.checkpoint
 from torch.utils.data import Dataset
 from PIL import Image
 from torchvision import transforms

@@ -56,11 +56,11 @@ class DefaultSafetyFilter:
             if nsfw:
                 ...
     """
-    def __init__(self, embeddings_path) -> None:
+    def __init__(self, embeddings_path: str) -> None:
         import clip as openai_clip
 
         self.model, self.preprocess = openai_clip.load("ViT-B/32", device="cpu")
-        self.nsfw_embeddings = torch.load(embeddings_path)
+        self.prepare_nsfw_embeddings(embeddings_path)
 
     def __call__(self, images):
         images = torch.stack([self.preprocess(img) for img in images])
@@ -70,7 +70,7 @@ class DefaultSafetyFilter:
         similarity = torch.mm(encoded_images, self.nsfw_embeddings.transpose(0, 1))
         return torch.any(similarity > 0.24, dim=1).tolist()
 
-    def setup(self) -> None:
+    def prepare_nsfw_embeddings(self, path) -> None:
         import clip as openai_clip
 
         ds = TextPromptDataset(NSFW_PROMPTS)

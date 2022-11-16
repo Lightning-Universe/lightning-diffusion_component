@@ -1,4 +1,6 @@
-# Lightning Diffusion
+# Lightning Diffusion
+
+Lightning Diffusion provides components to finetune and serve diffusion model on [lightning.ai](https://lightning.ai/).
 
 
 ```python
@@ -26,9 +28,9 @@ app = L.LightningApp(
 __________
 # Usage:
 ```
-# Using cpu-medium
-lightning run app app.py --cloud
+# Run locally
+lightning run app app.py
 
-# Using GPU
-lightning run app demo_app.py --cloud --env CLOUD_COMPUTE=gpu
+# Run in the cloud
+lightning run app app.py --cloud
 ```

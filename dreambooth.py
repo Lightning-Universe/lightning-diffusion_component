@@ -5,13 +5,14 @@ from datasets import DreamBoothDataset, PromptDataset
 import os
 import torch
 from diffusers import AutoencoderKL, DDPMScheduler, StableDiffusionPipeline, UNet2DConditionModel
-from transformers import CLIPTextModel, CLIPTokenizer
+from transformers import CLIPTextModel, CLIPTokenizer, CLIPFeatureExtractor
 import requests
 import gc
 import torch.nn.functional as F
 from lightning.app.components import LiteMultiNode
 from functools import partial
 from lightning.app.storage import Drive
+import re
 
 
 def collate_fn(examples, tokenizer, preservation_prompt):
@@ -39,6 +40,18 @@ def collate_fn(examples, tokenizer, preservation_prompt):
         "pixel_values": pixel_values,
     }
     return batch
+
+
+def prompt_generation(prompt):
+    prompt = re.findall(r'\[([^]]*)\]',prompt)
+    if len(prompt)!=3:
+        raise Exception("Your validation form must have the form: a photo of a [personal name] [class] [validation/complement]")
+    else:
+        prompt = "a photo of a "+prompt[0]+" "+ prompt[1]
+        preservation_prompt = "a photo of a "+ prompt[1]
+        validation_prompt = "a photo of a "+prompt[0]+" "+prompt[1]+" "+prompt[2]
+        return prompt, preservation_prompt, validation_prompt
+     
 
 
 class _DreamBoothFineTunerWork(L.LightningWork):
@@ -105,8 +118,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
 
         # User Arguments
         self.image_urls = image_urls
-        self.prompt = prompt
-        self.preservation_prompt = preservation_prompt
+        self.preservation_prompt, self.prompt, self.validation_prompt = prompt_generation(prompt)
         self.pretrained_model_name_or_path = pretrained_model_name_or_path
         self.revision = revision
         self.tokenizer_name = tokenizer_name
@@ -300,6 +312,23 @@ class _DreamBoothFineTunerWork(L.LightningWork):
 
             drive = Drive("lit://models", component_name="unet")
             drive.put("model.pt")
+
+
+            # validation exaple:
+            pipeline = StableDiffusionPipeline(
+            text_encoder=text_encoder,
+            vae=vae,
+            unet=unet.module,
+            tokenizer=tokenizer,
+            scheduler= noise_scheduler,
+            safety_checker = None,
+            feature_extractor=CLIPFeatureExtractor.from_pretrained("openai/clip-vit-base-patch32")).to(device=lite.device, dtype=dtype)
+            
+            images = pipeline(self.validation_prompt, num_images_per_prompt=1, num_inference_steps=50, guidance_scale=7.5).images[0]
+            images.save("validation_imag.jpg")
+            drive.put("validation_imag.jpg")
+
+  
 
         print("Dreambooth finetuning is done!")
 

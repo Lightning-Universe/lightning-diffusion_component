@@ -16,3 +16,4 @@ transformers
 deepspeed 
 bitsandbytes
 ftfy
+lightning-api-access

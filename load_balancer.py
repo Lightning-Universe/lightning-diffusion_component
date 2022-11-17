@@ -70,7 +70,6 @@ class LoadBalancer(LightningFlow):
 
         self.max_pending_calls_per_work = max_pending_calls_per_work
         self.max_idle_seconds_per_work = max_idle_seconds_per_work
-        self.workers = LightningDict()
 
         self._name = name
         self._work_attribute_prefix = (
@@ -89,7 +88,6 @@ class LoadBalancer(LightningFlow):
 
         work_attribute = f"{self._work_attribute_prefix}{uuid.uuid4().hex}"
         self._work_pool[work_attribute] = new_work
-        self.workers[work_attribute] = new_work
 
         return new_work
 

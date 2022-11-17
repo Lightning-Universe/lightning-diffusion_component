@@ -1,13 +1,12 @@
 import lightning as L
-import base64, io, torch
+import base64, io, torch, diffusers
 from lightning_diffusion import BaseDiffusion, models
-from diffusers import StableDiffusionPipeline
 
 
 class ServeDiffusion(BaseDiffusion):
 
     def setup(self, *args, **kwargs):
-        self._model = StableDiffusionPipeline.from_pretrained(
+        self._model = diffusers.StableDiffusionPipeline.from_pretrained(
             "CompVis/stable-diffusion-v1-4",
             **models.extras
         ).to("cuda" if torch.cuda.is_available() else "cpu")

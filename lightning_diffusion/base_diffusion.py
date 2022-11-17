@@ -43,7 +43,7 @@ class LoadBalancer(L.LightningFlow):
 
 class BaseDiffusion(L.LightningFlow, abc.ABC):
 
-    def __init__(self, serve_cloud_compute: L.CloudCompute = L.CloudCompute("cpu-medium", disk_size=100), num_replicas=1):
+    def __init__(self, serve_cloud_compute: L.CloudCompute = L.CloudCompute("cpu-medium", disk_size=50), num_replicas=1):
         super().__init__()
         if not is_overridden("predict", instance=self, parent=BaseDiffusion):
             raise Exception("The predict method needs to be overriden.")

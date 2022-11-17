@@ -210,6 +210,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
             tokenizer=tokenizer,
             size=self.resolution,
             center_crop=self.center_crop,
+            length=self.max_steps,
         )
 
         train_dataloader = torch.utils.data.DataLoader(
@@ -231,74 +232,65 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         vae = vae.to(device=lite.device, dtype=dtype)
         text_encoder = text_encoder.to(device=lite.device, dtype=dtype)
 
-        step = 0
 
         unet.train()
 
-        while True:
+        for step, batch in enumerate(train_dataloader):
 
-            for batch in train_dataloader:
+            # Accumulate gradient `gradient_accumulation_steps` batches at a time
+            is_accumulating = False # step % self.gradient_accumulation_steps != 0
 
-                # Accumulate gradient `gradient_accumulation_steps` batches at a time
-                is_accumulating = False # step % self.gradient_accumulation_steps != 0
+            with lite.no_backward_sync(unet, enabled=is_accumulating):
 
-                with lite.no_backward_sync(unet, enabled=is_accumulating):
+                with torch.no_grad():
+                    # Convert images to latent space
+                    latents = vae.encode(batch["pixel_values"].to(lite.device, dtype=dtype)).latent_dist.sample()
+                    latents = latents * 0.18215
 
-                    with torch.no_grad():
-                        # Convert images to latent space
-                        latents = vae.encode(batch["pixel_values"].to(lite.device, dtype=dtype)).latent_dist.sample()
-                        latents = latents * 0.18215
+                # Sample noise that we'll add to the latents
+                noise = torch.randn_like(latents, device=lite.device, dtype=dtype)
+                bsz = latents.shape[0]
 
-                    # Sample noise that we'll add to the latents
-                    noise = torch.randn_like(latents, device=lite.device, dtype=dtype)
-                    bsz = latents.shape[0]
+                # Sample a random timestep for each image
+                timesteps = torch.randint(0, noise_scheduler.config.num_train_timesteps, (bsz,), device=lite.device).long()
 
-                    # Sample a random timestep for each image
-                    timesteps = torch.randint(0, noise_scheduler.config.num_train_timesteps, (bsz,), device=lite.device).long()
+                # Add noise to the latents according to the noise magnitude at each timestep
+                # (this is the forward diffusion process)
+                noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
 
-                    # Add noise to the latents according to the noise magnitude at each timestep
-                    # (this is the forward diffusion process)
-                    noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
+                with torch.no_grad():
+                    # Get the text embedding for conditioning
+                    encoder_hidden_states = text_encoder(batch["input_ids"].to(lite.device))[0]
 
-                    with torch.no_grad():
-                        # Get the text embedding for conditioning
-                        encoder_hidden_states = text_encoder(batch["input_ids"].to(lite.device))[0]
+                # Predict the noise residual
+                noise_pred = unet(noisy_latents, timesteps, encoder_hidden_states).sample
 
-                    # Predict the noise residual
-                    noise_pred = unet(noisy_latents, timesteps, encoder_hidden_states).sample
+                if self.preservation_prompt:
+                    # Chunk the noise and noise_pred into two parts and compute the loss on each part separately.
+                    noise_pred, noise_pred_prior = torch.chunk(noise_pred, 2, dim=0)
+                    noise, noise_prior = torch.chunk(noise, 2, dim=0)
 
-                    if self.preservation_prompt:
-                        # Chunk the noise and noise_pred into two parts and compute the loss on each part separately.
-                        noise_pred, noise_pred_prior = torch.chunk(noise_pred, 2, dim=0)
-                        noise, noise_prior = torch.chunk(noise, 2, dim=0)
+                    # Compute instance loss
+                    loss = F.mse_loss(noise_pred.float(), noise.float(), reduction="none").mean([1, 2, 3]).mean()
 
-                        # Compute instance loss
-                        loss = F.mse_loss(noise_pred.float(), noise.float(), reduction="none").mean([1, 2, 3]).mean()
+                    # Compute prior loss
+                    prior_loss = F.mse_loss(noise_pred_prior.float(), noise_prior.float(), reduction="mean")
 
-                        # Compute prior loss
-                        prior_loss = F.mse_loss(noise_pred_prior.float(), noise_prior.float(), reduction="mean")
+                    # Add the prior loss to the instance loss.
+                    loss = loss + self.prior_loss_weight * prior_loss
+                else:
+                    loss = F.mse_loss(noise_pred.float(), noise.float(), reduction="mean")
 
-                        # Add the prior loss to the instance loss.
-                        loss = loss + self.prior_loss_weight * prior_loss
-                    else:
-                        loss = F.mse_loss(noise_pred.float(), noise.float(), reduction="mean")
+                lite.backward(loss)
 
-                    lite.backward(loss)
+            # Step the optimizer every 8 batches
+            if not is_accumulating:
+                optimizer.step()
+                optimizer.zero_grad()
+                step += 1
 
-                # Step the optimizer every 8 batches
-                if not is_accumulating:
-                    optimizer.step()
-                    optimizer.zero_grad()
-                    step += 1
-
-                if lite.is_global_zero:
-                    print(f"Step {step}/{self.max_steps}: {loss}")
-
-                if step >= self.max_steps:
-                    break
-
-            if step >= self.max_steps:
-                break
+            if lite.is_global_zero:
+                print(f"Step {step}/{self.max_steps}: {loss}")
 
         torch.distributed.destroy_process_group()
 

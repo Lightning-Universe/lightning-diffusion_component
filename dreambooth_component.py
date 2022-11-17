@@ -1,4 +1,4 @@
-from lightning.app.storage import Path
+import lightning as L
 
 from base_diffusion import BaseDiffusion
 import base64
@@ -25,7 +25,7 @@ class DreamBooth(BaseDiffusion):
 
         model_path = kwargs.get("checkpoint_path")
         if model_path:
-            if not isinstance(model_path, Path):
+            if not isinstance(model_path, L.storage.Path):
                 raise ValueError("checkpoint_path must be a lightning.storage.Path object")
             model_path.get()
             unet_path = model_path
@@ -60,3 +60,6 @@ class DreamBooth(BaseDiffusion):
         buffered = BytesIO()
         image.save(buffered, format="PNG")
         return {"image": base64.b64encode(buffered.getvalue())}
+
+
+app = L.LightningApp(DreamBooth())

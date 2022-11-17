@@ -75,6 +75,9 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         DreamBooth: Fine Tuning Text-to-Image Diffusion Models for Subject-Driven Generation
         https://arxiv.org/abs/2208.12242
 
+        The code is highly inspired from the diffusers `train_dreambooth.py` script:
+        https://github.com/ShivamShrirao/diffusers/blob/main/examples/dreambooth/train_dreambooth.py.
+
         Arguments:
             image_urls: List of image urls to fine-tune the models.
             prompt: The prompt to describe the images.
@@ -138,7 +141,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         if self.seed is not None:
             L.seed_everything(self.seed)
 
-        # self.prepare_data(lite)
+        self.prepare_data(lite)
 
         # # Load the tokenizer
         tokenizer = CLIPTokenizer.from_pretrained(
@@ -169,7 +172,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
             use_auth_token=self.use_auth_token,
         )
 
-        # Freeze the var and text encoder
+        # Freeze the var and text encoder
         vae.requires_grad_(False)
         text_encoder.requires_grad_(False)
 
@@ -237,7 +240,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
             for batch in train_dataloader:
 
                 # Accumulate gradient `gradient_accumulation_steps` batches at a time
-                is_accumulating = False# step % self.gradient_accumulation_steps != 0
+                is_accumulating = False # step % self.gradient_accumulation_steps != 0
 
                 with lite.no_backward_sync(unet, enabled=is_accumulating):
 
@@ -287,7 +290,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
                     optimizer.step()
                     optimizer.zero_grad()
                     step += 1
-    
+
                 if lite.is_global_zero:
                     print(f"Step {step}/{self.max_steps}: {loss}")
 
@@ -359,7 +362,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
 
         sample_dataset = PromptDataset(self.preservation_prompt, len(num_new_images))
         sample_dataloader = torch.utils.data.DataLoader(
-            sample_dataset, 
+            sample_dataset,
             batch_size=2,
         )
 
@@ -389,7 +392,7 @@ class DreamBoothFineTuner(LiteMultiNode):
     def __init__(
         self,
         *args,
-        cloud_compute = L.CloudCompute("gpu-fast-multi"),
+        cloud_compute = L.CloudCompute("gpu-fast"),
         num_nodes: int = 1,
         **kwargs
     ):

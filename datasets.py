@@ -15,6 +15,7 @@ class DreamBoothDataset(Dataset):
         class_prompt=None,
         size=450,
         center_crop=False,
+        length=None,
     ):
         self.size = size # image size
         self.center_crop = center_crop
@@ -43,6 +44,9 @@ class DreamBoothDataset(Dataset):
             self.class_prompt = class_prompt
         else:
             self.class_data_root = None
+
+        if length:
+            self._length = length
 
         # image transform
         self.image_transforms = transforms.Compose(
@@ -76,7 +80,7 @@ class DreamBoothDataset(Dataset):
 
         # handle prior examples
         if self.class_data_root:
-            # load prioir examples
+            # load prior examples
             class_image = Image.open(self.class_images_path[index % self.num_class_images])
             # make it RGB
             if not class_image.mode == "RGB":

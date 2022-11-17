@@ -53,6 +53,14 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
             self.finetuner = LambdaWork(self.finetune, parallel=False)
         self.load_balancer = LoadBalancer(DiffusionServe(parent_flow=trimmed_flow(self), cloud_compute=L.CloudCompute(name="cpu-medium", disk_size=100)), num_replicas=num_replicas)
 
+    @property
+    def model(self):
+        return self._model
+
+    @model.setter
+    def model(self, model):
+        self._model = model
+
     @abc.abstractmethod
     def setup(self, *args, **kwargs):
         pass

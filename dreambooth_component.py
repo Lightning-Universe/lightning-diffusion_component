@@ -8,7 +8,6 @@ from base_diffusion import BaseDiffusion
 
 from diffusers import StableDiffusionPipeline
 from diffusion_serve import DreamBoothInput
-from utils import image_decode
 
 PRETRAINED_MODEL_NAME = "CompVis/stable-diffusion-v1-4"
 HF_TOKEN = "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"
@@ -23,7 +22,7 @@ class DreamBooth(BaseDiffusion):
 
     def setup(self, *args, **kwargs):
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        self._model = StableDiffusionPipeline.from_pretrained(
+        self.model = StableDiffusionPipeline.from_pretrained(
             "CompVis/stable-diffusion-v1-4",
             **extras
         ).to(device)
@@ -34,9 +33,7 @@ class DreamBooth(BaseDiffusion):
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
     def predict(self, data: DreamBoothInput):
-        print("Predicting...")
-        print(data.prompt)
-        out = self._model(prompt=data.prompt, num_inference_steps=1)
+        out = self.model(prompt=data.prompt, num_inference_steps=1)
         return {"image": self.serialize(out[0][0])}
 
 

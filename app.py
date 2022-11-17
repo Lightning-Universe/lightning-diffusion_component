@@ -29,7 +29,7 @@ class DreamBoothWork(L.LightningWork):
             prompt="a photo of sks cat clay toy",
             preservation_prompt="a photo of cat clay toy",
             validation_prompt="a photo of sks cat clay toy riding a bicycle",
-            max_steps=450,
+            max_steps=200,
             gradient_accumulation_steps=2,
         ).run(self._model)
 

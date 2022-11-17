@@ -33,16 +33,20 @@ def create_feature_extractor():
 def create_safety_checker():
     return None
 
+extras = {
+        "revision": "fp16",
+        "use_auth_token": "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",
+} 
+
 def get_kwargs(pretrained_model_name_or_path: str, drive = None) -> Dict[str, str]:
     kwargs = {
         "revision": "fp16",
         "use_auth_token": "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",
+        "pretrained_model_name_or_path": pretrained_model_name_or_path
     } 
 
     if drive.list() == ["model.pt"]:
         drive.get("model.pt", overwrite=True)
-        kwargs["pretrained_model_name_or_path"] = os.path.join(os.getcwd(), "model.pt") 
-    else:
-        kwargs['pretrained_model_name_or_path'] = pretrained_model_name_or_path
+        kwargs = {"pretrained_model_name_or_path": "./model.pt"}
 
     return kwargs

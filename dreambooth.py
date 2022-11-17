@@ -131,7 +131,6 @@ class DreamBoothTuner:
         return os.path.join(os.getcwd(), "data", 'preservation_images')
 
     def run(self, model: StableDiffusionPipeline):
-
         lite = LightningLite(precision=self.precision, strategy="deepspeed_stage_2_offload")
 
         self.setup(lite, model)
@@ -201,7 +200,7 @@ class DreamBoothTuner:
 
         if lite.is_global_zero:
             # TODO: Implement DeepSpeed saving in Lite.
-            torch.save(unet.module, "model.pt")
+            torch.save(model.unet.module, "model.pt")
 
             drive = Drive("lit://models", component_name="unet")
             drive.put("model.pt")

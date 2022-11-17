@@ -348,11 +348,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         )
         pipeline.enable_attention_slicing()
 
-        user_images = os.path.join(os.getcwd(), "data", 'user_images')
-
-        num_new_images = os.listdir(user_images)
-
-        sample_dataset = PromptDataset(self.preservation_prompt, len(num_new_images))
+        sample_dataset = PromptDataset(self.preservation_prompt, max(self.max_steps, 300))
         sample_dataloader = torch.utils.data.DataLoader(
             sample_dataset,
             batch_size=2,

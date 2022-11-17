@@ -200,11 +200,6 @@ class DreamBoothTuner:
             safety_checker = self.evaluate_model(model)
 
             # TODO: Implement DeepSpeed saving in Lite.
-            # model = StableDiffusionPipeline.from_pretrained(
-            #     "CompVis/stable-diffusion-v1-4",
-            #     revision="fp16",
-            #     use_auth_token="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",
-            # )
             model.unet = unet
             model.safety_checker = safety_checker
 

@@ -1,19 +1,14 @@
 import lightning as L
 from lightning_diffusion import BaseDiffusion, DreamBoothInput, DreamBoothTuner, encode_to_base64, models
-from lightning.app.storage import Drive
 from diffusers import StableDiffusionPipeline
 
 
 class DreamBoothDiffusion(BaseDiffusion):
 
-    def __init__(self):
-        super().__init__()
-        self.weights_drive = Drive("lit://weights")
-
     def setup(self):
         self._model = StableDiffusionPipeline.from_pretrained(
             "CompVis/stable-diffusion-v1-4",
-            **models.get_extras(),
+            **models.get_extras(self.weights_drive),
         )
 
     def finetune(self):
@@ -26,11 +21,16 @@ class DreamBoothDiffusion(BaseDiffusion):
                 ## You can change or add additional images here
             ],
             prompt="a photo of [sks] [cat clay toy] [riding a bicycle]",
-        ).run(self._model)
+        ).run(self.model)
 
     def predict(self, data: DreamBoothInput):
-        images = self._model(prompt=data.prompt)[0]
+        images = self.model(prompt=data.prompt)[0]
         return {"images": encode_to_base64(images)}
 
 
-app = L.LightningApp(DreamBoothDiffusion())
+app = L.LightningApp(
+    DreamBoothDiffusion(
+        serve_cloud_compute=L.CloudCompute("gpu"),
+        finetune_cloud_compute=L.CloudCompute("gpu-fast"),
+    )
+)

@@ -11,6 +11,7 @@ import re
 import torch.nn.functional as F
 from functools import partial
 from dataclasses import dataclass
+from lightning.app.storage import Drive
 
 
 def collate_fn(examples, tokenizer, preservation_prompt):
@@ -64,12 +65,12 @@ class DreamBoothTuner:
     lr_scheduler = "constant"
     lr_warmup_steps: int = 0
     precision: int = 16
-    use_auth_token: str = "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"
     seed: int = 42
     gradient_checkpointing: bool = True
     resolution: int = 512
     scale_lr: bool = True
     center_crop: bool = True
+    num_images_per_prompt: int = 5
 
     """
     The `DreamBoothFineTuner` fine-tunes stable diffusion models using the methodology introduced in
@@ -98,6 +99,7 @@ class DreamBoothTuner:
         seed: The seed to initialize the random initializers.
         resolution: The resolution of the image to train upon.
         center_crop: Whether to crop the images in the center
+        num_images_per_prompt: Number of validation images to generate for the provided prompt.
     """
 
     def __post_init__(self):
@@ -202,8 +204,8 @@ class DreamBoothTuner:
 
             model.save_pretrained("model.pt")
 
-            # drive = Drive("lit://models", component_name="unet")
-            # drive.put("model.pt")
+            drive = Drive("lit://weights", component_name="models")
+            drive.put("model.pt")
 
         print("Dreambooth finetuning is done!")
 
@@ -270,7 +272,7 @@ class DreamBoothTuner:
             tokenizer=model.tokenizer,
             size=self.resolution,
             center_crop=self.center_crop,
-            length=self.max_steps * 2,
+            length=self.max_steps,
         )
 
         train_dataloader = torch.utils.data.DataLoader(
@@ -348,7 +350,7 @@ class DreamBoothTuner:
         model.safety_checker = None
 
         with torch.inference_mode():
-            images = model(self.validation_prompt, num_images_per_prompt=10).images
+            images = model(self.validation_prompt, num_images_per_prompt=self.num_images_per_prompt).images
 
             for image in images:
                 path = os.path.join(self.validation_images_data_dir, f"{counter}.jpg")

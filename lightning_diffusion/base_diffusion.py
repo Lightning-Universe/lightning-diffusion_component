@@ -1,10 +1,12 @@
 import abc
 
 import lightning as L
+from typing import Optional
 from copy import deepcopy
 from lightning.app.utilities.app_helpers import is_overridden
 from lightning_diffusion.diffusion_serve import DiffusionServe
 from lightning_diffusion.lite_finetuner import Finetuner
+from lightning.app.storage import Drive
 
 
 def trimmed_flow(flow: 'L.LightningFlow') -> 'L.LightningFlow':
@@ -43,20 +45,36 @@ class LoadBalancer(L.LightningFlow):
 
 class BaseDiffusion(L.LightningFlow, abc.ABC):
 
-    def __init__(self, num_replicas=1):
+    def __init__(
+        self,
+        finetune_cloud_compute: Optional[L.CloudCompute] = None,
+        serve_cloud_compute: Optional[L.CloudCompute] = None,
+        num_replicas=1
+    ):
         super().__init__()
         if not is_overridden("predict", instance=self, parent=BaseDiffusion):
             raise Exception("The predict method needs to be overriden.")
+
+        self.weights_drive = Drive("lit://weights")
+        self._model = None
 
         _trimmed_flow = trimmed_flow(self)
 
         self.finetuner = None
         if is_overridden("finetune", instance=self, parent=BaseDiffusion):
-            self.finetuner = Finetuner(flow=_trimmed_flow)
+            self.finetuner = Finetuner(
+                flow=_trimmed_flow,
+                cloud_compute=finetune_cloud_compute,
+            )
 
-        self.load_balancer = LoadBalancer(DiffusionServe(_trimmed_flow), num_replicas=num_replicas)
+        self.load_balancer = LoadBalancer(
+            DiffusionServe(_trimmed_flow),
+            num_replicas=num_replicas,
+        )
 
-        self._model = None
+    @property
+    def model(self):
+        return self._model
 
     @property
     def tuner_config(self):

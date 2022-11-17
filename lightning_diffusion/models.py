@@ -33,7 +33,6 @@ def create_safety_checker():
     return None
 
 def get_extras(drive = None):
-    breakpoint()
     if drive.list() == ["model.pt"]:
         pass
 

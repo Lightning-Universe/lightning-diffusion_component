@@ -1,26 +1,20 @@
 from dreambooth import DreamBoothTuner
 import lightning as L
 from diffusers import StableDiffusionPipeline
-import models
-from lightning.app.storage import Drive
 from lightning.app.components import LiteMultiNode
+import models
 
 
 class DreamBoothWork(L.LightningWork):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.weights_drive = Drive("lit://weights")
+        self.weights_drive = L.app.storage.Drive("lit://weights")
 
     def setup(self):
-        self._model = StableDiffusionPipeline(
-            text_encoder=models.create_text_encoder(),
-            vae=models.create_vae(),
-            unet=models.create_unet(self.weights_drive),
-            tokenizer=models.create_tokenizer(),
-            scheduler=models.create_scheduler(),
-            safety_checker=models.create_safety_checker(),
-            feature_extractor=models.create_feature_extractor(),
+        self._model = StableDiffusionPipeline.from_pretrained(
+            "CompVis/stable-diffusion-v1-4",
+            **models.extras,
         )
 
     def finetune(self):
@@ -32,7 +26,9 @@ class DreamBoothWork(L.LightningWork):
                 "https://huggingface.co/datasets/valhalla/images/resolve/main/6.jpeg",
                 ## You can change or add additional images here
             ],
-            prompt="a photo of [sks] [cat clay toy] [riding a bicycle]",
+            prompt="a photo of sks cat clay toy",
+            preservation_prompt="a photo of cat clay toy",
+            validation_prompt="a photo of sks cat clay toy riding a bicycle",
         ).run(self._model)
 
     def run(self):

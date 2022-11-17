@@ -10,6 +10,7 @@ import gc
 import torch.nn.functional as F
 from functools import partial
 from lightning.app.storage import Drive
+from dataclasses import dataclass
 
 
 def collate_fn(examples, tokenizer, preservation_prompt):
@@ -39,89 +40,62 @@ def collate_fn(examples, tokenizer, preservation_prompt):
     return batch
 
 
+@dataclass
 class DreamBoothTuner:
 
-    def __init__(
-        self,
-        image_urls: List[str],
-        prompt: str,
-        preservation_prompt: Optional[str] = None,
-        num_preservation_images: int = 25,
-        pretrained_model_name_or_path: str = "CompVis/stable-diffusion-v1-4",
-        revision: Optional[str] = "fp16",
-        tokenizer_name: Optional[str] = None,
-        max_steps: int = 5,
-        prior_loss_weight: float = 1.0,
-        train_batch_size: int = 1,
-        gradient_accumulation_steps: int = 1,
-        learning_rate: float = 5e-6,
-        lr_scheduler = "constant",
-        lr_warmup_steps: int = 0,
-        precision: int = 16,
-        use_auth_token: str = "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",
-        seed: int = 42,
-        gradient_checkpointing: bool = True,
-        cloud_compute: L.CloudCompute = L.CloudCompute("gpu-fast"),
-        resolution: int = 512,
-        scale_lr: bool = True,
-        center_crop: bool = True,
-        **kwargs,
-    ):
-        """
-        The `DreamBoothFineTuner` fine-tunes stable diffusion models using the methodology introduced in
+    image_urls: List[str]
+    prompt: str
+    preservation_prompt: str
+    validation_prompt: str
+    num_preservation_images: int = 25
+    pretrained_model_name_or_path: str = "CompVis/stable-diffusion-v1-4"
+    revision: Optional[str] = "fp16"
+    tokenizer_name: Optional[str] = None
+    max_steps: int = 5
+    prior_loss_weight: float = 1.0
+    train_batch_size: int = 1
+    gradient_accumulation_steps: int = 1
+    learning_rate: float = 5e-6
+    lr_scheduler = "constant"
+    lr_warmup_steps: int = 0
+    precision: int = 16
+    use_auth_token: str = "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"
+    seed: int = 42
+    gradient_checkpointing: bool = True
+    resolution: int = 512
+    scale_lr: bool = True
+    center_crop: bool = True
 
-        DreamBooth: Fine Tuning Text-to-Image Diffusion Models for Subject-Driven Generation
-        https://arxiv.org/abs/2208.12242
+    """
+    The `DreamBoothFineTuner` fine-tunes stable diffusion models using the methodology introduced in
 
-        The code is highly inspired from the diffusers `train_dreambooth.py` script:
-        https://github.com/ShivamShrirao/diffusers/blob/main/examples/dreambooth/train_dreambooth.py.
+    DreamBooth: Fine Tuning Text-to-Image Diffusion Models for Subject-Driven Generation
+    https://arxiv.org/abs/2208.12242
 
-        Arguments:
-            image_urls: List of image urls to fine-tune the models.
-            prompt: The prompt to run the fine-tuning process.
-                The prompt needs to be in the format of the reference with the `[...]`.
-                Reference Format: `A photo of [NOUN] [DESCRIPTIVE CLASS] [DESCRIPTION FOR THE NEW GENERATED IMAGES]`.
-                Example: `A photo of [peter] [cat clay toy] [riding a bicycle]`.
-            num_preservation_images: The number of images to preserve the model abilities.
-            pretrained_model_name_or_path: The name of the model.
-            revision: The revision commit for the model weights.
-            tokenizer_name: The name of the tokenizer.
-            prior_loss_weight: The weight of prior preservation loss to preserve knowledge.
-            train_batch_size: The batch size used during training.
-            gradient_accumulation_steps: Number of training batch before updating the weights.
-            learning_rate: The learning rate to optimize the model.
-            lr_scheduler: The LR scheduler to be used.
-            lr_warmup_steps: The number of warmup steps.
-            precision: The precision to be used for fine-tuning the model.
-            seed: The seed to initialize the random initializers.
-            resolution: The resolution of the image to train upon.
-            center_crop: Whether to crop the images in the center
-            kwargs: The keywords arguments passed down to the work.
-        """
-        super().__init__()
+    The code is highly inspired from the diffusers `train_dreambooth.py` script:
+    https://github.com/ShivamShrirao/diffusers/blob/main/examples/dreambooth/train_dreambooth.py.
 
-        self.image_urls = image_urls
-        self.prompt = prompt
-        self.preservation_prompt = preservation_prompt
-        self.pretrained_model_name_or_path = pretrained_model_name_or_path
-        self.revision = revision
-        self.tokenizer_name = tokenizer_name
-        self.max_steps = max_steps
-        self.prior_loss_weight = prior_loss_weight
-        self.train_batch_size = train_batch_size
-        self.num_preservation_images = num_preservation_images
-        self.gradient_accumulation_steps = gradient_accumulation_steps
-        self.learning_rate = learning_rate
-        self.lr_scheduler = lr_scheduler
-        self.lr_warmup_steps = lr_warmup_steps
-        self.precision = precision
-        self.use_auth_token = use_auth_token
-        self.gradient_checkpointing = gradient_checkpointing
-        self.seed = seed
-        self.resolution = resolution
-        self.center_crop = center_crop
-        self.scale_lr = scale_lr
-
+    Arguments:
+        image_urls: List of image urls to fine-tune the models.
+        prompt: The prompt to run the fine-tuning process.
+            The prompt needs to be in the format of the reference with the `[...]`.
+            Reference Format: `A photo of [NOUN] [DESCRIPTIVE CLASS] [DESCRIPTION FOR THE NEW GENERATED IMAGES]`.
+            Example: `A photo of [peter] [cat clay toy] [riding a bicycle]`.
+        num_preservation_images: The number of images to preserve the model abilities.
+        pretrained_model_name_or_path: The name of the model.
+        revision: The revision commit for the model weights.
+        tokenizer_name: The name of the tokenizer.
+        prior_loss_weight: The weight of prior preservation loss to preserve knowledge.
+        train_batch_size: The batch size used during training.
+        gradient_accumulation_steps: Number of training batch before updating the weights.
+        learning_rate: The learning rate to optimize the model.
+        lr_scheduler: The LR scheduler to be used.
+        lr_warmup_steps: The number of warmup steps.
+        precision: The precision to be used for fine-tuning the model.
+        seed: The seed to initialize the random initializers.
+        resolution: The resolution of the image to train upon.
+        center_crop: Whether to crop the images in the center
+    """
     @property
     def user_images_data_dir(self) -> str:
         return os.path.join(os.getcwd(), "data", 'user_images')
@@ -129,6 +103,10 @@ class DreamBoothTuner:
     @property
     def preservation_images_data_dir(self) -> str:
         return os.path.join(os.getcwd(), "data", 'preservation_images')
+
+    @property
+    def validation_images_data_dir(self) -> str:
+        return os.path.join(os.getcwd(), "data", 'validation_images')
 
     def run(self, model: StableDiffusionPipeline):
         lite = LightningLite(precision=self.precision, strategy="deepspeed_stage_2_offload")
@@ -199,14 +177,18 @@ class DreamBoothTuner:
         torch.distributed.destroy_process_group()
 
         if lite.is_global_zero:
+
+            self.evaluate_model(model)
+
             # TODO: Implement DeepSpeed saving in Lite.
-            torch.save(model.unet.module, "model.pt")
+            model.unet = model.unet.module
+
+            model.save_pretrained("model.pt")
 
             drive = Drive("lit://models", component_name="unet")
             drive.put("model.pt")
 
         print("Dreambooth finetuning is done!")
-
 
     def setup(self, lite, model):
         if self.preservation_prompt is None:
@@ -309,8 +291,6 @@ class DreamBoothTuner:
 
         os.makedirs(self.preservation_images_data_dir, exist_ok=True)
 
-        model.enable_attention_slicing()
-
         sample_dataset = PromptDataset(self.preservation_prompt, self.num_preservation_images)
         sample_dataloader = torch.utils.data.DataLoader(
             sample_dataset,
@@ -340,3 +320,20 @@ class DreamBoothTuner:
         gc.collect()
         with torch.no_grad():
             torch.cuda.empty_cache()
+
+    def evaluate_model(self, model):
+        os.makedirs(self.validation_images_data_dir, exist_ok=True)
+
+        counter = 0 
+
+        model.vae = model.vae.to(torch.float32)
+        model.text_encoder = model.text_encoder.to(torch.float32)
+        model.safety_checker = None
+
+        with torch.inference_mode():
+            images = model(self.validation_prompt, num_images_per_prompt=10).images
+
+            for image in images:
+                path = os.path.join(self.validation_images_data_dir, f"{counter}.jpg")
+                image.save(path)
+                counter += 1

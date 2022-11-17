@@ -14,15 +14,7 @@ class DreamBoothDiffusion(BaseDiffusion):
         self.weights_drive = Drive("lit://weights")
 
     def setup(self):
-        self.model = StableDiffusionPipeline(
-            text_encoder=models.create_text_encoder(),
-            vae=models.create_vae(),
-            unet=models.create_unet(self.weights_drive),
-            tokenizer=models.create_tokenizer(),
-            scheduler=models.create_scheduler(),
-            safety_checker=models.create_safety_checker(),
-            feature_extractor=models.create_feature_extractor(),
-        )
+        self._model = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4", **models.extras)
 
     def finetune(self):
         DreamBoothTuner(
@@ -34,7 +26,7 @@ class DreamBoothDiffusion(BaseDiffusion):
                 ## You can change or add additional images here
             ],
             prompt="a photo of [sks] [cat clay toy] [riding a bicycle]",
-        ).run(self.model)
+        ).run(self._model)
 
     def predict(self, data: DreamBoothInput):
         images = self.model(prompt=data.prompt)[0]

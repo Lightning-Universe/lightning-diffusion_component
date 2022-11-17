@@ -39,6 +39,10 @@ class BaseDiffusion(LightningFlow, abc.ABC):
         self._backend = backend
 
     @abc.abstractmethod
+    def setup(self, *args, **kwargs):
+        pass
+
+    @abc.abstractmethod
     def predict(self, request):
         pass
 

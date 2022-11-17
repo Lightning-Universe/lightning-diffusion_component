@@ -363,9 +363,9 @@ class _DreamBoothFineTunerWork(L.LightningWork):
 
         for example in sample_dataloader:
 
-            if (L + counter) >= num_samples:
+            if (L + counter) >= self.num_preservation_images:
                 break
-            
+
             with torch.inference_mode():
                 images = pipeline(example["prompt"]).images
 

@@ -1,5 +1,6 @@
 import lightning as L
-import base64, io, base_diffusion, torch, models
+import base64, io, torch
+from lightning_diffusion import base_diffusion, models
 from diffusers import StableDiffusionPipeline
 
 

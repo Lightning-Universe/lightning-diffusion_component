@@ -1,7 +1,7 @@
 from PIL import Image
 import numpy
 
-from safety_checker import DefaultSafetyFilter
+from lightning_diffusion.safety_checker import DefaultSafetyFilter
 
 
 def test_safety_filter_random_images():

@@ -5,8 +5,8 @@ from typing import Optional
 import lightning as L
 
 from lightning.app.utilities.app_helpers import is_overridden
-from diffusion_serve import DiffusionServe
-from lite_finetuner import Finetuner
+from lightning_diffusion.diffusion_serve import DiffusionServe
+from lightning_diffusion.lite_finetuner import Finetuner
 
 
 class LoadBalancer(L.LightningFlow):
@@ -57,8 +57,8 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
     def run(self):
         if self.finetuner:
             self.finetuner.run()
-            if self.finetuner.has_succeeded:
-                self.server.run()
+            # if self.finetuner.has_succeeded:
+            #     self.server.run()
         else:
             self.server.run()
 

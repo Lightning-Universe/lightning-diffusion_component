@@ -1,7 +1,7 @@
 import lightning as L
 from lightning.lite import LightningLite
-from typing import List, Optional
-from datasets import DreamBoothDataset, PromptDataset
+from typing import List
+from lightning_diffusion.datasets import DreamBoothDataset, PromptDataset
 import os
 import torch
 from diffusers import StableDiffusionPipeline
@@ -9,7 +9,6 @@ import requests
 import gc
 import torch.nn.functional as F
 from functools import partial
-from lightning.app.storage import Drive
 from dataclasses import dataclass
 
 

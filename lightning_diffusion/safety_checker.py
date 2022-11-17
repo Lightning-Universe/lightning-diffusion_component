@@ -1,8 +1,5 @@
 # https://github.com/Lightning-AI/stable-diffusion-deploy/blob/a560875612548f531972f71921c5a09a1fe1fb74/muse/components/
 # https://github.com/Lightning-AI/stable-diffusion-deploy/blob/a560875612548f531972f71921c5a09a1fe1fb74/muse/components/stable_diffusion_serve.py
-import os
-from typing import List, Optional
-
 import torch
 from torch.utils.data import DataLoader, Dataset
 

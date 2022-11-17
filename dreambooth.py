@@ -47,11 +47,11 @@ class DreamBoothTuner:
     prompt: str
     preservation_prompt: str
     validation_prompt: str
-    num_preservation_images: int = 100
+    num_preservation_images: int = 50
     pretrained_model_name_or_path: str = "CompVis/stable-diffusion-v1-4"
     revision: Optional[str] = "fp16"
     tokenizer_name: Optional[str] = None
-    max_steps: int = 5
+    max_steps: int = 450
     prior_loss_weight: float = 1
     train_batch_size: int = 1
     gradient_accumulation_steps: int = 1
@@ -255,7 +255,7 @@ class DreamBoothTuner:
             tokenizer=model.tokenizer,
             size=self.resolution,
             center_crop=self.center_crop,
-            length=self.max_steps,
+            length=self.max_steps * 2,
         )
 
         train_dataloader = torch.utils.data.DataLoader(

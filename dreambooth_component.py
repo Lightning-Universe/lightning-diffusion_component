@@ -6,7 +6,6 @@ from io import BytesIO
 
 from transformers import CLIPFeatureExtractor, CLIPTextModel, CLIPTokenizer
 from diffusers import AutoencoderKL, DDPMScheduler, StableDiffusionPipeline, UNet2DConditionModel
-
 from diffusion_serve import DreamBoothInput
 
 PRETRAINED_MODEL_NAME = "CompVis/stable-diffusion-v1-4"
@@ -33,7 +32,7 @@ class DreamBooth(BaseDiffusion):
             unet_path = PRETRAINED_MODEL_NAME
         unet = UNet2DConditionModel.from_pretrained(unet_path, subfolder="unet", use_auth_token=HF_TOKEN)
 
-        self._model = StableDiffusionPipeline(
+        model = StableDiffusionPipeline(
             text_encoder=text_encoder,
             vae=vae,
             unet=unet,
@@ -42,6 +41,7 @@ class DreamBooth(BaseDiffusion):
             safety_checker=safety_checker,
             feature_extractor=feature_extractor
         )
+        self._model = model
 
     def predict(self, data: DreamBoothInput):
         prompt = data.prompt

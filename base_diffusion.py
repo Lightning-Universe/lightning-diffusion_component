@@ -26,7 +26,6 @@ def trimmed_flow(flow: 'LightningFlow') -> 'LightningFlow':
     return flow_copy
 
 
-
 class LoadBalancer(L.LightningFlow):
     def __init__(self, server: L.LightningWork, num_replicas: int = 1):
         super().__init__()

@@ -9,9 +9,11 @@ lightning
 Pillow>=2.9.0
 numpy>=1.9.2
 tensorflow
-diffusers==0.4.1
+diffusers
 tensorboard
 transformers
 deepspeed
 ftfy
 lightning-api-access
+git+https://github.com/openai/CLIP.git
+

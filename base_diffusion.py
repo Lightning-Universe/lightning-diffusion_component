@@ -14,9 +14,11 @@ class LoadBalancer(LightningFlow):
         super().__init__()
         self.server = server
         self.num_replicas = num_replicas
+        self.url = ""
 
     def run(self):
         self.server.run()
+        self.url = self.server.url
 
     def configure_layout(self):
         return {'name': 'API', 'content': self.server}
@@ -39,6 +41,10 @@ class BaseDiffusion(LightningFlow, abc.ABC):
         self._backend = backend
 
     @abc.abstractmethod
+    def setup(self, *args, **kwargs):
+        pass
+
+    @abc.abstractmethod
     def predict(self, request):
         pass
 
@@ -51,4 +57,4 @@ class BaseDiffusion(LightningFlow, abc.ABC):
         self.load_balancer.run()
 
     def configure_layout(self):
-        return {'name': 'API', 'content': self.load_balancer}
+        return {'name': 'API', 'content': self.load_balancer.url}

@@ -6,7 +6,6 @@ pyyaml==5.4.0
 protobuf<4.21.0  # 4.21 breaks with wandb, tensorboard, or pytorch-lightning: https://github.com/protocolbuffers/protobuf/issues/10048
 lightning_hpo
 lightning
-gdown
 Pillow>=2.9.0
 numpy>=1.9.2
 tensorflow
@@ -15,3 +14,4 @@ tensorboard
 transformers
 deepspeed
 ftfy
+lightning-api-access

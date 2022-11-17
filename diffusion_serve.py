@@ -31,8 +31,8 @@ class DiffusionServe(PythonServer):
         super().__init__(host=host, port=port, input_type=DreamBoothInput, output_type=DreamBoothOutput, **kwargs)
         self._parent_flow = parent_flow
 
-    def setup(self):
-        self._parent_flow.setup()
+    def setup(self, *args, **kwargs):
+        self._parent_flow.setup(*args, **kwargs)
 
     def predict(self, prompt: str):
         return self._parent_flow.predict(prompt)

@@ -1,10 +1,10 @@
 import lightning as L
 import base64, io, torch
-from lightning_diffusion import base_diffusion, models
+from lightning_diffusion import BaseDiffusion, models
 from diffusers import StableDiffusionPipeline
 
 
-class ServeDiffusion(base_diffusion.BaseDiffusion):
+class ServeDiffusion(BaseDiffusion):
 
     def setup(self, *args, **kwargs):
         self._model = StableDiffusionPipeline.from_pretrained(

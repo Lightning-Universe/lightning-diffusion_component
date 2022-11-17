@@ -1,12 +1,13 @@
 import lightning as L
 from lightning.lite import LightningLite
-from typing import List
+from typing import List, Optional
 from lightning_diffusion.datasets import DreamBoothDataset, PromptDataset
 import os
 import torch
 from diffusers import StableDiffusionPipeline
 import requests
 import gc
+import re
 import torch.nn.functional as F
 from functools import partial
 from dataclasses import dataclass
@@ -39,15 +40,23 @@ def collate_fn(examples, tokenizer, preservation_prompt):
     return batch
 
 
+def prompt_generation(prompt):
+    prompt = re.findall(r"\[([^]]*)\]",prompt)
+    if len(prompt)!=3:
+        raise Exception("Your validation form must have the form: a photo of a [personal name] [class] [validation/complement]")
+    else:
+        prompt = f"a photo of a {prompt[0]} {prompt[1]}"
+        preservation_prompt = f"a photo of a {prompt[1]}"
+        validation_prompt = f"a photo of a {prompt[0]} {prompt[1]} {prompt[1]}"
+
+
 @dataclass
 class DreamBoothTuner:
 
     image_urls: List[str]
     prompt: str
-    preservation_prompt: str
-    validation_prompt: str
     num_preservation_images: int = 100
-    max_steps: int = 200
+    max_steps: int = 2
     prior_loss_weight: float = 1
     train_batch_size: int = 1
     gradient_accumulation_steps: int = 1
@@ -90,6 +99,17 @@ class DreamBoothTuner:
         resolution: The resolution of the image to train upon.
         center_crop: Whether to crop the images in the center
     """
+
+    def __post_init__(self):
+        prompt = re.findall(r"\[([^]]*)\]", self.prompt)
+        if len(prompt)!=3:
+            raise Exception("Your validation form must have the form: a photo of a [personal name] [class] [validation/complement]")
+        else:
+            self.prompt = f"a photo of a {prompt[0]} {prompt[1]}"
+            self.preservation_prompt = f"a photo of a {prompt[1]}"
+            self.validation_prompt = f"a photo of a {prompt[0]} {prompt[1]} {prompt[1]}"
+
+
     @property
     def user_images_data_dir(self) -> str:
         return os.path.join(os.getcwd(), "data", 'user_images')
@@ -102,7 +122,8 @@ class DreamBoothTuner:
     def validation_images_data_dir(self) -> str:
         return os.path.join(os.getcwd(), "data", 'validation_images')
 
-    def run(self, model: StableDiffusionPipeline):
+    def run(self, model: Optional[StableDiffusionPipeline]):
+        assert model
         lite = LightningLite(precision=self.precision, strategy="deepspeed_stage_2_offload")
 
         self.setup(lite, model)

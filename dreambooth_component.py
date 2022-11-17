@@ -13,7 +13,7 @@ class DreamBoothDiffusion(BaseDiffusion):
     def setup(self):
         self._model = StableDiffusionPipeline.from_pretrained(
             "CompVis/stable-diffusion-v1-4",
-            **models.extras,
+            **models.get_extras(),
         )
 
     def finetune(self):
@@ -25,11 +25,7 @@ class DreamBoothDiffusion(BaseDiffusion):
                 "https://huggingface.co/datasets/valhalla/images/resolve/main/6.jpeg",
                 ## You can change or add additional images here
             ],
-            prompt="a photo of sks cat clay toy",
-            preservation_prompt="a photo of cat clay toy",
-            validation_prompt="a photo of sks cat clay toy riding a bicycle",
-            max_steps=200,
-            gradient_accumulation_steps=1,
+            prompt="a photo of [sks] [cat clay toy] [riding a bicycle]",
         ).run(self._model)
 
     def predict(self, data: DreamBoothInput):

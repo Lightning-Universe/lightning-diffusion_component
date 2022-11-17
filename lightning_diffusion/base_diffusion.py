@@ -1,12 +1,29 @@
 import abc
 
-from typing import Optional
-
 import lightning as L
-
+from copy import deepcopy
 from lightning.app.utilities.app_helpers import is_overridden
 from lightning_diffusion.diffusion_serve import DiffusionServe
 from lightning_diffusion.lite_finetuner import Finetuner
+
+
+def trimmed_flow(flow: 'L.LightningFlow') -> 'L.LightningFlow':
+    """Trims a flow to not have any of the internal attributes.
+    """
+    backend = flow._backend
+    flow._backend = None
+    for f in flow.flows:
+        f._backend = None
+    for w in flow.works():
+        w._backend = None
+
+    # also taking a deep copy
+    flow_copy = deepcopy(flow)
+    if backend:
+        L.LightningFlow._attach_backend(flow, backend)
+    return flow_copy
+
+
 
 
 class LoadBalancer(L.LightningFlow):
@@ -31,11 +48,13 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
         if not is_overridden("predict", instance=self, parent=BaseDiffusion):
             raise Exception("The predict method needs to be overriden.")
 
+        _trimmed_flow = trimmed_flow(self)
+
         self.finetuner = None
         if is_overridden("finetune", instance=self, parent=BaseDiffusion):
-            self.finetuner = Finetuner(flow=self)
+            self.finetuner = Finetuner(flow=_trimmed_flow)
 
-        self.load_balancer = LoadBalancer(DiffusionServe(self), num_replicas=num_replicas)
+        self.load_balancer = LoadBalancer(DiffusionServe(_trimmed_flow), num_replicas=num_replicas)
 
         self._model = None
 
@@ -57,10 +76,10 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
     def run(self):
         if self.finetuner:
             self.finetuner.run()
-            # if self.finetuner.has_succeeded:
-            #     self.server.run()
+            if self.finetuner.has_succeeded:
+                self.load_balancer.run()
         else:
-            self.server.run()
+            self.load_balancer.run()
 
     def configure_layout(self):
         return {'name': 'API', 'content': self.load_balancer.url}

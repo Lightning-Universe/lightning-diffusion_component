@@ -9,7 +9,6 @@ class FlowLambdaWork(L.LightningWork):
         self._flow = flow
 
     def run(self):
-        breakpoint()
         self._flow.setup()
         self._flow.finetune()
 
@@ -31,5 +30,6 @@ class Finetuner(LiteMultiNode):
             **kwargs
         )
 
+    @property
     def has_succeeded(self) -> bool:
-        return all(w.has_succeeded or w.has_stopped for w in self.works())
+        return len(self.works()) > 0 and all(w.has_stopped for w in self.works())

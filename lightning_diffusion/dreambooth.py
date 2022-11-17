@@ -143,7 +143,7 @@ class DreamBoothTuner:
 
             with lite.no_backward_sync(model.unet, enabled=is_accumulating):
 
-                with torch.inference_mode():
+                with torch.no_grad():
                     # Convert images to latent space
                     latents = model.vae.encode(batch["pixel_values"].to(lite.device, dtype=dtype)).latent_dist.sample()
                     latents = latents * 0.18215
@@ -159,7 +159,7 @@ class DreamBoothTuner:
                 # (this is the forward diffusion process)
                 noisy_latents = model.scheduler.add_noise(latents, noise, timesteps)
 
-                with torch.inference_mode():
+                with torch.no_grad():
                     # Get the text embedding for conditioning
                     encoder_hidden_states = model.text_encoder(batch["input_ids"].to(lite.device))[0]
 

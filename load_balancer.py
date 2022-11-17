@@ -56,6 +56,10 @@ class LoadBalancer(LightningFlow):
 
     def __init__(
         self,
+        work_cls: type,
+        balance_function: str,
+        num_replicas: int = 4,
+        auto_scale: bool = True,
         name: str = DEFAULT_WORK_ATTRIBUTE_PREFIX,
         max_pending_calls_per_work=DEFAULT_MAX_PENDING_CALLS_PER_WORK,
         max_idle_seconds_per_work=DEFAULT_MAX_IDLE_SECONDS_PER_WORK,

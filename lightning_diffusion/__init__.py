@@ -5,4 +5,4 @@ from lightning_diffusion.image import encode_to_base64
 from lightning_diffusion import models
 from lightning_diffusion.safety_checker import DefaultSafetyFilter
 
-__all__ = ['BaseDiffusion', "DreamBoothInput", "DreamBoothTuner", "encode_to_base64", "models"]
+__all__ = ['BaseDiffusion', "DreamBoothInput", "DreamBoothTuner", "DefaultSafetyFilter", "encode_to_base64", "models"]

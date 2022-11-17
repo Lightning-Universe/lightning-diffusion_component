@@ -11,7 +11,7 @@ import gc
 import torch.nn.functional as F
 from lightning.app.components import LiteMultiNode
 from functools import partial
-from lightning.app.storage import Path
+from lightning.app.storage import Drive
 
 
 def collate_fn(examples, tokenizer, preservation_prompt):
@@ -60,7 +60,6 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         lr_warmup_steps: int = 0,
         max_train_steps: int = 400,
         precision: int = 16,
-        use_8bit_adam: bool = True,
         use_auth_token: str = "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",
         seed: int = 42,
         gradient_checkpointing: bool = True,
@@ -94,7 +93,6 @@ class _DreamBoothFineTunerWork(L.LightningWork):
             lr_warmup_steps: The number of warmup steps.
             max_train_steps: The number of training steps to fine-tune the model.
             precision: The precision to be used for fine-tuning the model.
-            use_8bit_adam: Whether to use 8 bit adam.
             seed: The seed to initialize the random initializers.
             resolution: The resolution of the image to train upon.
             center_crop: Whether to crop the images in the center
@@ -119,15 +117,11 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         self.max_train_steps = max_train_steps
         self.precision = precision
         self.use_auth_token = use_auth_token
-        self.use_8bit_adam = use_8bit_adam
         self.gradient_checkpointing = gradient_checkpointing
         self.seed = seed
         self.resolution = resolution
         self.center_crop = center_crop
         self.scale_lr = scale_lr
-
-        # Captured at the end of the training.
-        self.model_path = None
 
     @property
     def user_images_data_dir(self) -> str:
@@ -139,7 +133,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
 
     def run(self):
 
-        lite = LightningLite(precision=self.precision,  strategy="deepspeed_stage_1")
+        lite = LightningLite(precision=self.precision, strategy="deepspeed_stage_2_offload")
 
         if self.seed is not None:
             L.seed_everything(self.seed)
@@ -181,6 +175,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
 
         if self.gradient_checkpointing:
             unet.enable_gradient_checkpointing()
+            text_encoder.gradient_checkpointing_enable()
 
         world_size = int(os.getenv("WORLD_SIZE", 1))
 
@@ -190,17 +185,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
             )
 
         # # Use 8-bit Adam for lower memory usage or to fine-tune the model in 16GB GPUs
-        if self.use_8bit_adam:
-            try:
-                import bitsandbytes as bnb
-            except ImportError:
-                raise ImportError(
-                    "To use 8-bit Adam, please install the bitsandbytes library: `pip install bitsandbytes`."
-                )
-
-            optimizer_class = bnb.optim.AdamW8bit
-        else:
-            optimizer_class = torch.optim.AdamW
+        optimizer_class = torch.optim.AdamW
 
         params_to_optimize = unet.parameters()
         optimizer = optimizer_class(
@@ -237,7 +222,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         dtype = torch.float32
         if self.precision == 16:
             dtype = torch.float16
-        elif self.mixed_precision == "bf16":
+        elif self.precision == "bf16":
             dtype = torch.bfloat16
 
         vae = vae.to(device=lite.device, dtype=dtype)
@@ -248,8 +233,6 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         unet.train()
 
         while True:
-
-            unet.train()
 
             for batch in train_dataloader:
 
@@ -319,9 +302,11 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         if lite.is_global_zero:
             # TODO: Implement DeepSpeed saving in Lite.
             torch.save(unet.module, "model.pt")
-            # self.model_path = Path("model.pt")
-        
-        print("Done")
+
+            drive = Drive("lit://models", component_name="unet")
+            drive.put("model.pt")
+
+        print("Dreambooth finetuning is done!")
 
 
     def prepare_data(self, lite):
@@ -404,8 +389,8 @@ class DreamBoothFineTuner(LiteMultiNode):
     def __init__(
         self,
         *args,
-        cloud_compute = L.CloudCompute("gpu-fast"),
-        num_nodes: int = 1, 
+        cloud_compute = L.CloudCompute("gpu-fast-multi"),
+        num_nodes: int = 1,
         **kwargs
     ):
         super().__init__(

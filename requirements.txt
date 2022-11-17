@@ -10,9 +10,8 @@ gdown
 Pillow>=2.9.0
 numpy>=1.9.2
 tensorflow
-diffusers==0.4.1 
-tensorboard 
+diffusers==0.4.1
+tensorboard
 transformers
-deepspeed 
-bitsandbytes
+deepspeed
 ftfy

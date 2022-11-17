@@ -14,7 +14,7 @@ class LoadBalancer(LightningFlow):
         super().__init__()
         self.server = server
         self.num_replicas = num_replicas
-        self.url = None
+        self.url = ""
 
     def run(self):
         self.server.run()

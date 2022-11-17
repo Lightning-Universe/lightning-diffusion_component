@@ -5,8 +5,8 @@ import lightning as L
 
 from lightning.app.utilities.app_helpers import is_overridden
 
-from diffusion_serve_work import DiffusionServe
-from lambda_work import LambdaWork
+from lightning_diffusion.diffusion_serve_work import DiffusionServe
+from lightning_diffusion.lambda_work import LambdaWork
 
 
 def trimmed_flow(flow: 'LightningFlow') -> 'LightningFlow':

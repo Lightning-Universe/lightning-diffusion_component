@@ -1,5 +1,3 @@
-from lightning.app import LightningApp
-
 from base_diffusion import BaseDiffusion
 import base64
 from io import BytesIO
@@ -21,11 +19,10 @@ class DreamBooth(BaseDiffusion):
         vae = AutoencoderKL.from_pretrained(PRETRAINED_MODEL_NAME, subfolder="vae", use_auth_token=HF_TOKEN)
         tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-large-patch14")
         scheduler = DDPMScheduler(beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear")
-        default_safety_filter = StableDiffusionSafetyChecker.from_pretrained("CompVis/stable-diffusion-safety-checker")
-        safety_checker = self._safety_filter if self._safety_filter else default_safety_filter
+        safety_checker = StableDiffusionSafetyChecker.from_pretrained("CompVis/stable-diffusion-safety-checker")
         feature_extractor = CLIPFeatureExtractor.from_pretrained("openai/clip-vit-base-patch32")
 
-        if self.model_path:
+        if False:
             self.model_path.get()
             unet_path = self.model_path
         else:
@@ -42,14 +39,20 @@ class DreamBooth(BaseDiffusion):
             feature_extractor=feature_extractor
         )
 
-    def predict(self, prompt: Any):
-        out = self._model(prompt.payload)
-        print(type(out))
-        print(out)
-        image = out["sample"][0]
+    def predict(self, data: Any):
+        prompt = data.prompt
+        if data.quality == "low":
+            num_steps = 1
+        elif data.quality == "medium":
+            num_steps = 20
+        elif data.quality == "high":
+            num_steps = 50
+        else:
+            raise ValueError("Invalid quality")
+        out = self._model(prompt=prompt, num_inference_steps=num_steps)
+        images = out[0]
+        nsfw_validations = out[1]
+        image = images[0]
         buffered = BytesIO()
         image.save(buffered, format="PNG")
-        return base64.b64encode(buffered.getvalue())
-
-
-app = LightningApp(DreamBooth())
+        return {"image": base64.b64encode(buffered.getvalue())}

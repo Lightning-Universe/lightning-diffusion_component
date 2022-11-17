@@ -18,6 +18,9 @@ class LoadBalancer(LightningFlow):
     def run(self):
         self.server.run()
 
+    def configure_layout(self):
+        return {'name': 'API', 'content': self.server}
+
 
 class BaseDiffusion(LightningFlow, abc.ABC):
 
@@ -43,7 +46,9 @@ class BaseDiffusion(LightningFlow, abc.ABC):
         raise NotImplementedError("Fine tuning is not implemented.")
 
     def run(self):
-        print("running base")
         if self.finetuner:
             self.finetuner.run()
         self.load_balancer.run()
+
+    def configure_layout(self):
+        return {'name': 'API', 'content': self.load_balancer}

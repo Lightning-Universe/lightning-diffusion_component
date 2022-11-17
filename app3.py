@@ -1,5 +1,5 @@
 from lightning.app import LightningApp
 
-from dreambooth import DreamBooth
+from dreambooth_component import DreamBooth
 
 app = LightningApp(DreamBooth())

@@ -1,3 +1,6 @@
+import base64
+import io
+
 import lightning as L
 import torch.cuda
 
@@ -10,6 +13,11 @@ from utils import image_decode
 PRETRAINED_MODEL_NAME = "CompVis/stable-diffusion-v1-4"
 HF_TOKEN = "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"
 
+extras = {
+    "use_auth_token": "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",
+}
+
+
 
 class DreamBooth(BaseDiffusion):
 
@@ -17,14 +25,19 @@ class DreamBooth(BaseDiffusion):
         device = "cuda" if torch.cuda.is_available() else "cpu"
         self._model = StableDiffusionPipeline.from_pretrained(
             "CompVis/stable-diffusion-v1-4",
-            **models.extras
-        )
+            **extras
+        ).to(device)
+
+    def serialize(self, image):
+        buffered = io.BytesIO()
+        image.save(buffered, format="PNG")
+        return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
     def predict(self, data: DreamBoothInput):
         print("Predicting...")
         print(data.prompt)
         out = self._model(prompt=data.prompt, num_inference_steps=1)
-        return {"image": image_decode(out[0][0])}
+        return {"image": self.serialize(out[0][0])}
 
 
 app = L.LightningApp(DreamBooth())

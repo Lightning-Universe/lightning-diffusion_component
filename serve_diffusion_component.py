@@ -3,7 +3,7 @@ import base64, io, base_diffusion, torch, models
 from diffusers import StableDiffusionPipeline
 
 
-class DreamBoothDiffusion(base_diffusion.BaseDiffusion):
+class ServeDiffusion(base_diffusion.BaseDiffusion):
 
     def setup(self, *args, **kwargs):
         self._model = StableDiffusionPipeline.from_pretrained(
@@ -17,8 +17,8 @@ class DreamBoothDiffusion(base_diffusion.BaseDiffusion):
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
     def predict(self, data):
-        out = self._model(prompt=data.prompt, num_inference_steps=20)
+        out = self._model(prompt=data.prompt)
         return {"image": self.serialize(out[0][0])}
 
 
-app = L.LightningApp(DreamBoothDiffusion())
+app = L.LightningApp(ServeDiffusion())

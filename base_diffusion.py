@@ -5,7 +5,7 @@ import lightning as L
 
 from lightning.app.utilities.app_helpers import is_overridden
 
-from diffusion_serve import DiffusionServe
+from diffusion_serve_work import DiffusionServe
 from lambda_work import LambdaWork
 
 
@@ -43,7 +43,7 @@ class LoadBalancer(L.LightningFlow):
 
 class BaseDiffusion(L.LightningFlow, abc.ABC):
 
-    def __init__(self, num_replicas=1):
+    def __init__(self, serve_cloud_compute: L.CloudCompute = L.CloudCompute("gpu", disk_size=100), num_replicas=1):
         super().__init__()
         if not is_overridden("predict", instance=self, parent=BaseDiffusion):
             raise Exception("The predict method needs to be overriden.")
@@ -52,7 +52,8 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
         self.finetuner = None
         if is_overridden("finetune", instance=self, parent=BaseDiffusion):
             self.finetuner = LambdaWork(self.finetune, parallel=False)
-        self.load_balancer = LoadBalancer(DiffusionServe(parent_flow=trimmed_flow(self), cloud_compute=L.CloudCompute(name="cpu-medium", disk_size=100)), num_replicas=num_replicas)
+        self.load_balancer = LoadBalancer(
+            DiffusionServe(parent_flow=trimmed_flow(self), cloud_compute=serve_cloud_compute), num_replicas=num_replicas)
 
     @property
     def model(self):

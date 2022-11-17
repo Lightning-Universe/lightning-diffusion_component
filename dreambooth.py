@@ -135,7 +135,7 @@ class DreamBoothTuner:
 
         self.setup(lite, model)
 
-        optimizer = self.prepare_model(lite, model)
+        optimizer, dtype = self.prepare_model(lite, model)
 
         train_dataloader = self.prepare_data(lite, model)
 
@@ -148,7 +148,7 @@ class DreamBoothTuner:
 
                 with torch.no_grad():
                     # Convert images to latent space
-                    latents = model.unet.encode(batch["pixel_values"].to(lite.device, dtype=dtype)).latent_dist.sample()
+                    latents = model.vae.encode(batch["pixel_values"].to(lite.device, dtype=dtype)).latent_dist.sample()
                     latents = latents * 0.18215
 
                 # Sample noise that we'll add to the latents
@@ -260,7 +260,7 @@ class DreamBoothTuner:
 
         model.unet.train()
 
-        return optimizer
+        return optimizer, dtype
 
     def prepare_data(self, lite: LightningLite, model):
         train_dataset = DreamBoothDataset(

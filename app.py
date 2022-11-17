@@ -3,8 +3,10 @@ import lightning as L
 from diffusers import StableDiffusionPipeline
 import models
 from lightning.app.storage import Drive
+from lightning.app.components import LiteMultiNode
 
-class DreamBooth(L.LightningWork):
+
+class DreamBoothWork(L.LightningWork):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -37,5 +39,22 @@ class DreamBooth(L.LightningWork):
         self.setup()
         self.finetune()
 
+
+class DreamBooth(LiteMultiNode):
+
+    def __init__(
+        self,
+        *args,
+        cloud_compute = L.CloudCompute("gpu-fast"),
+        num_nodes: int = 1,
+        **kwargs
+    ):
+        super().__init__(
+            *args,
+            work_cls=DreamBoothWork,
+            num_nodes=num_nodes,
+            cloud_compute=cloud_compute,
+            **kwargs
+        )
 
 app = L.LightningApp(DreamBooth())

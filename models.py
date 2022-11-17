@@ -2,6 +2,7 @@ from transformers import CLIPFeatureExtractor, CLIPTextModel, CLIPTokenizer
 from diffusers import AutoencoderKL, DDPMScheduler, UNet2DConditionModel
 from lightning.app.storage import Drive
 from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
+import torch
 
 
 HF_TOKEN = "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"
@@ -20,7 +21,7 @@ def create_unet(drive: Drive):
         source = "model.pt"
     else:
         source = pretrained_model_name_or_path
-    return UNet2DConditionModel.from_pretrained(source, subfolder="unet", use_auth_token=HF_TOKEN)
+    return UNet2DConditionModel.from_pretrained(source, subfolder="unet", use_auth_token=HF_TOKEN, torch_dtype=torch.float32)
 
 def create_tokenizer():
     return CLIPTokenizer.from_pretrained(pretrained_model_name_or_path, subfolder="tokenizer", use_auth_token=HF_TOKEN)

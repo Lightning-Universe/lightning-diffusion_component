@@ -1,14 +1,12 @@
 import abc
 
-from typing import Optional, Dict
+from typing import Optional
 
 import lightning as L
 
 from lightning.app.utilities.app_helpers import is_overridden
-from dreambooth import DreamBoothTunerConfig
-
 from diffusion_serve import DiffusionServe
-from lambda_work import LambdaWork
+from lite_finetuner import Finetuner
 
 
 class LoadBalancer(L.LightningFlow):
@@ -28,30 +26,18 @@ class LoadBalancer(L.LightningFlow):
 
 class BaseDiffusion(L.LightningFlow, abc.ABC):
 
-    def __init__(self, num_replicas=1, tuner_config: Optional[DreamBoothTunerConfig] = None):
+    def __init__(self, num_replicas=1):
         super().__init__()
         if not is_overridden("predict", instance=self, parent=BaseDiffusion):
             raise Exception("The predict method needs to be overriden.")
 
-        self._tuner_config = None
         self.finetuner = None
         if is_overridden("finetune", instance=self, parent=BaseDiffusion):
-            self._tuner_config = tuner_config
-            self.finetuner = LambdaWork(self.finetune, parallel=False)
+            self.finetuner = Finetuner(flow=self)
 
-        backend = self._backend
-        self._backend = None
         self.load_balancer = LoadBalancer(DiffusionServe(self), num_replicas=num_replicas)
-        self._backend = backend
+
         self._model = None
-
-    @property
-    def model(self):
-        return self._model
-
-    @model.setter
-    def model(self, model):
-        self._model = model
 
     @property
     def tuner_config(self):
@@ -71,7 +57,10 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
     def run(self):
         if self.finetuner:
             self.finetuner.run()
-        self.server.run()
+            if self.finetuner.has_succeeded:
+                self.server.run()
+        else:
+            self.server.run()
 
     def configure_layout(self):
         return {'name': 'API', 'content': self.load_balancer.url}

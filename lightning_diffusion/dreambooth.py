@@ -48,10 +48,7 @@ class DreamBoothTuner:
     preservation_prompt: str
     validation_prompt: str
     num_preservation_images: int = 100
-    pretrained_model_name_or_path: str = "CompVis/stable-diffusion-v1-4"
-    revision: Optional[str] = "fp16"
-    tokenizer_name: Optional[str] = None
-    max_steps: int = 450
+    max_steps: int = 200
     prior_loss_weight: float = 1
     train_batch_size: int = 1
     gradient_accumulation_steps: int = 1
@@ -83,8 +80,6 @@ class DreamBoothTuner:
             Example: `A photo of [peter] [cat clay toy] [riding a bicycle]`.
         num_preservation_images: The number of images to preserve the model abilities.
         pretrained_model_name_or_path: The name of the model.
-        revision: The revision commit for the model weights.
-        tokenizer_name: The name of the tokenizer.
         prior_loss_weight: The weight of prior preservation loss to preserve knowledge.
         train_batch_size: The batch size used during training.
         gradient_accumulation_steps: Number of training batch before updating the weights.

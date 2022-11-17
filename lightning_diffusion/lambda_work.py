@@ -1,7 +1,7 @@
-from lightning.app import LightningWork
+import lightning as L
 
 
-class LambdaWork(LightningWork):
+class LambdaWork(L.LightningWork):
     def __init__(self, fn, **kwargs):
         super().__init__(**kwargs)
         self.fn = fn

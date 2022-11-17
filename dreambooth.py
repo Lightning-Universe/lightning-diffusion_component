@@ -348,7 +348,9 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         )
         pipeline.enable_attention_slicing()
 
-        sample_dataset = PromptDataset(self.preservation_prompt, max(self.max_steps, 300))
+        num_samples = min(self.max_steps, 300)
+
+        sample_dataset = PromptDataset(self.preservation_prompt, num_samples)
         sample_dataloader = torch.utils.data.DataLoader(
             sample_dataset,
             batch_size=2,
@@ -357,11 +359,15 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         sample_dataloader = lite.setup_dataloaders(sample_dataloader)
         pipeline.to(lite.device)
 
-        L = len(os.listdir(self.user_images_data_dir))
+        L = len(os.listdir(self.preservation_images_data_dir))
 
         counter = 0
 
         for example in sample_dataloader:
+
+            if (L + counter) >= num_samples:
+                break
+
             images = pipeline(example["prompt"]).images
             for image in images:
                 path = os.path.join(self.preservation_images_data_dir, f"{counter + L}.jpg")

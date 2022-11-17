@@ -4,12 +4,10 @@ from typing import List, Optional
 from datasets import DreamBoothDataset, PromptDataset
 import os
 import torch
-from diffusers import AutoencoderKL, DDPMScheduler, StableDiffusionPipeline, UNet2DConditionModel
-from transformers import CLIPTextModel, CLIPTokenizer
+from diffusers import StableDiffusionPipeline
 import requests
 import gc
 import torch.nn.functional as F
-from lightning.app.components import LiteMultiNode
 from functools import partial
 from lightning.app.storage import Drive
 
@@ -41,7 +39,7 @@ def collate_fn(examples, tokenizer, preservation_prompt):
     return batch
 
 
-class _DreamBoothFineTunerWork(L.LightningWork):
+class DreamBoothTuner:
 
     def __init__(
         self,
@@ -80,11 +78,10 @@ class _DreamBoothFineTunerWork(L.LightningWork):
 
         Arguments:
             image_urls: List of image urls to fine-tune the models.
-            prompt: The prompt to describe the images.
-                Example: `A [V] dog` where `[V]` is a special name given for
-                the diffusion model to learn about this new concept.
-            preservation_prompt: The prompt used for the diffusion model to preserve knowledge.
-                Example: `A dog`
+            prompt: The prompt to run the fine-tuning process.
+                The prompt needs to be in the format of the reference with the `[...]`.
+                Reference Format: `A photo of [NOUN] [DESCRIPTIVE CLASS] [DESCRIPTION FOR THE NEW GENERATED IMAGES]`.
+                Example: `A photo of [peter] [cat clay toy] [riding a bicycle]`.
             num_preservation_images: The number of images to preserve the model abilities.
             pretrained_model_name_or_path: The name of the model.
             revision: The revision commit for the model weights.
@@ -101,9 +98,8 @@ class _DreamBoothFineTunerWork(L.LightningWork):
             center_crop: Whether to crop the images in the center
             kwargs: The keywords arguments passed down to the work.
         """
-        super().__init__(cloud_compute=cloud_compute, **kwargs)
+        super().__init__()
 
-        # User Arguments
         self.image_urls = image_urls
         self.prompt = prompt
         self.preservation_prompt = preservation_prompt
@@ -134,117 +130,26 @@ class _DreamBoothFineTunerWork(L.LightningWork):
     def preservation_images_data_dir(self) -> str:
         return os.path.join(os.getcwd(), "data", 'preservation_images')
 
-    def run(self):
+    def run(self, model: StableDiffusionPipeline):
 
         lite = LightningLite(precision=self.precision, strategy="deepspeed_stage_2_offload")
 
-        self.prepare_data(lite)
+        self.setup(lite, model)
 
-        if self.seed is not None:
-            L.seed_everything(self.seed)
+        optimizer = self.prepare_model(lite, model)
 
-        # # Load the tokenizer
-        tokenizer = CLIPTokenizer.from_pretrained(
-            self.pretrained_model_name_or_path,
-            subfolder="tokenizer",
-            revision=self.revision,
-            use_auth_token=self.use_auth_token,
-        )
-
-        # # Load models and create wrapper for stable diffusion
-        text_encoder = CLIPTextModel.from_pretrained(
-            self.pretrained_model_name_or_path,
-            subfolder="text_encoder",
-            revision=self.revision,
-            use_auth_token=self.use_auth_token,
-        )
-        vae = AutoencoderKL.from_pretrained(
-            self.pretrained_model_name_or_path,
-            subfolder="vae",
-            revision=self.revision,
-            use_auth_token=self.use_auth_token,
-        )
-        unet = UNet2DConditionModel.from_pretrained(
-            self.pretrained_model_name_or_path,
-            subfolder="unet",
-            revision=self.revision,
-            torch_dtype=torch.float32,
-            use_auth_token=self.use_auth_token,
-        )
-
-        # Freeze the var and text encoder
-        vae.requires_grad_(False)
-        text_encoder.requires_grad_(False)
-
-        if self.gradient_checkpointing:
-            unet.enable_gradient_checkpointing()
-            text_encoder.gradient_checkpointing_enable()
-
-        world_size = int(os.getenv("WORLD_SIZE", 1))
-
-        if self.scale_lr:
-            self.learning_rate = (
-                self.learning_rate * self.gradient_accumulation_steps * self.train_batch_size * world_size
-            )
-
-        # # Use 8-bit Adam for lower memory usage or to fine-tune the model in 16GB GPUs
-        optimizer_class = torch.optim.AdamW
-
-        params_to_optimize = unet.parameters()
-        optimizer = optimizer_class(
-            params_to_optimize,
-            lr=self.learning_rate,
-        )
-
-        noise_scheduler = DDPMScheduler.from_config(
-            self.pretrained_model_name_or_path,
-            subfolder="scheduler",
-            use_auth_token=self.use_auth_token,
-        )
-
-        train_dataset = DreamBoothDataset(
-            instance_data_root=self.user_images_data_dir,
-            instance_prompt=self.prompt,
-            class_data_root=self.preservation_images_data_dir if self.preservation_prompt else None,
-            class_prompt=self.preservation_prompt,
-            tokenizer=tokenizer,
-            size=self.resolution,
-            center_crop=self.center_crop,
-            length=self.max_steps,
-        )
-
-        train_dataloader = torch.utils.data.DataLoader(
-            train_dataset,
-            batch_size=self.train_batch_size,
-            shuffle=True,
-            collate_fn=partial(collate_fn, tokenizer=tokenizer, preservation_prompt=self.preservation_prompt),
-            num_workers=1,
-        )
-
-        unet, optimizer = lite.setup(unet, optimizer)  # Scale your model / optimizers
-
-        dtype = torch.float32
-        if self.precision == 16:
-            dtype = torch.float16
-        elif self.precision == "bf16":
-            dtype = torch.bfloat16
-
-        vae = vae.to(device=lite.device, dtype=dtype)
-        text_encoder = text_encoder.to(device=lite.device, dtype=dtype)
-
-
-        unet.train()
+        train_dataloader = self.prepare_data(lite, model)
 
         for step, batch in enumerate(train_dataloader):
 
             # Accumulate gradient `gradient_accumulation_steps` batches at a time
             is_accumulating = False # step % self.gradient_accumulation_steps != 0
 
-            with lite.no_backward_sync(unet, enabled=is_accumulating):
+            with lite.no_backward_sync(model.unet, enabled=is_accumulating):
 
                 with torch.no_grad():
                     # Convert images to latent space
-                    latents = vae.encode(batch["pixel_values"].to(lite.device, dtype=dtype)).latent_dist.sample()
+                    latents = model.unet.encode(batch["pixel_values"].to(lite.device, dtype=dtype)).latent_dist.sample()
                     latents = latents * 0.18215
 
                 # Sample noise that we'll add to the latents
@@ -252,18 +157,18 @@ class _DreamBoothFineTunerWork(L.LightningWork):
                 bsz = latents.shape[0]
 
                 # Sample a random timestep for each image
-                timesteps = torch.randint(0, noise_scheduler.config.num_train_timesteps, (bsz,), device=lite.device).long()
+                timesteps = torch.randint(0, model.scheduler.config.num_train_timesteps, (bsz,), device=lite.device).long()
 
                 # Add noise to the latents according to the noise magnitude at each timestep
                 # (this is the forward diffusion process)
-                noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
+                noisy_latents = model.scheduler.add_noise(latents, noise, timesteps)
 
                 with torch.no_grad():
                     # Get the text embedding for conditioning
-                    encoder_hidden_states = text_encoder(batch["input_ids"].to(lite.device))[0]
+                    encoder_hidden_states = model.text_encoder(batch["input_ids"].to(lite.device))[0]
 
                 # Predict the noise residual
-                noise_pred = unet(noisy_latents, timesteps, encoder_hidden_states).sample
+                noise_pred = model.unet(noisy_latents, timesteps, encoder_hidden_states).sample
 
                 if self.preservation_prompt:
                     # Chunk the noise and noise_pred into two parts and compute the loss on each part separately.
@@ -304,7 +209,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         print("Dreambooth finetuning is done!")
 
 
-    def prepare_data(self, lite):
+    def setup(self, lite, model):
         if self.preservation_prompt is None:
             return
 
@@ -313,7 +218,72 @@ class _DreamBoothFineTunerWork(L.LightningWork):
 
         self._download_images()
 
-        self._generate_preservation_images(lite)
+        self._generate_preservation_images(lite, model)
+
+    def prepare_model(self, lite, model):
+        if self.seed is not None:
+            L.seed_everything(self.seed)
+
+        # Freeze the var and text encoder
+        model.vae.requires_grad_(False)
+        model.text_encoder.requires_grad_(False)
+
+        if self.gradient_checkpointing:
+            model.unet.enable_gradient_checkpointing()
+            model.text_encoder.gradient_checkpointing_enable()
+
+        world_size = int(os.getenv("WORLD_SIZE", 1))
+
+        if self.scale_lr:
+            self.learning_rate = (
+                self.learning_rate * self.gradient_accumulation_steps * self.train_batch_size * world_size
+            )
+
+        # # Use 8-bit Adam for lower memory usage or to fine-tune the model in 16GB GPUs
+        optimizer_class = torch.optim.AdamW
+
+        params_to_optimize = model.unet.parameters()
+        optimizer = optimizer_class(
+            params_to_optimize,
+            lr=self.learning_rate,
+        )
+
+        model.unet, optimizer = lite.setup(model.unet, optimizer)  # Scale your model / optimizers
+
+        dtype = torch.float32
+        if self.precision == 16:
+            dtype = torch.float16
+        elif self.precision == "bf16":
+            dtype = torch.bfloat16
+
+        model.vae = model.vae.to(device=lite.device, dtype=dtype)
+        model.text_encoder = model.text_encoder.to(device=lite.device, dtype=dtype)
+
+        model.unet.train()
+
+        return optimizer
+
+    def prepare_data(self, lite: LightningLite, model):
+        train_dataset = DreamBoothDataset(
+            instance_data_root=self.user_images_data_dir,
+            instance_prompt=self.prompt,
+            class_data_root=self.preservation_images_data_dir if self.preservation_prompt else None,
+            class_prompt=self.preservation_prompt,
+            tokenizer=model.tokenizer,
+            size=self.resolution,
+            center_crop=self.center_crop,
+            length=self.max_steps,
+        )
+
+        train_dataloader = torch.utils.data.DataLoader(
+            train_dataset,
+            batch_size=self.train_batch_size,
+            shuffle=True,
+            collate_fn=partial(collate_fn, tokenizer=model.tokenizer, preservation_prompt=self.preservation_prompt),
+            num_workers=1,
+        )
+
+        return lite.setup_dataloaders(train_dataloader)
 
     def _download_images(self):
         """Download the images provided by the user"""
@@ -336,17 +306,11 @@ class _DreamBoothFineTunerWork(L.LightningWork):
             else:
                 print(f"The image from {image_url} doesn't exist.")
 
-    def _generate_preservation_images(self, lite: LightningLite):
+    def _generate_preservation_images(self, lite: LightningLite, model):
 
         os.makedirs(self.preservation_images_data_dir, exist_ok=True)
 
-        pipeline = StableDiffusionPipeline.from_pretrained(
-            self.pretrained_model_name_or_path,
-            revision=self.revision,
-            use_auth_token=self.use_auth_token,
-            torch_dtype=torch.float32,
-        )
-        pipeline.enable_attention_slicing()
+        model.enable_attention_slicing()
 
         sample_dataset = PromptDataset(self.preservation_prompt, self.num_preservation_images)
         sample_dataloader = torch.utils.data.DataLoader(
@@ -355,7 +319,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         )
 
         sample_dataloader = lite.setup_dataloaders(sample_dataloader)
-        pipeline.to(lite.device)
+        model.to(lite.device)
 
         L = len(os.listdir(self.preservation_images_data_dir))
 
@@ -367,33 +331,13 @@ class _DreamBoothFineTunerWork(L.LightningWork):
                 break
 
             with torch.inference_mode():
-                images = pipeline(example["prompt"]).images
+                images = model(example["prompt"]).images
 
             for image in images:
                 path = os.path.join(self.preservation_images_data_dir, f"{counter + L}.jpg")
                 image.save(path)
                 counter += 1
 
-        pipeline = None
         gc.collect()
-        del pipeline
         with torch.no_grad():
             torch.cuda.empty_cache()
-
-
-class DreamBoothFineTuner(LiteMultiNode):
-
-    def __init__(
-        self,
-        *args,
-        cloud_compute = L.CloudCompute("gpu-fast"),
-        num_nodes: int = 1,
-        **kwargs
-    ):
-        super().__init__(
-            *args,
-            work_cls=_DreamBoothFineTunerWork,
-            num_nodes=num_nodes,
-            cloud_compute=cloud_compute,
-            **kwargs
-        )

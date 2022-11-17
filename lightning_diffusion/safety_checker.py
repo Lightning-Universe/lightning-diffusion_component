@@ -44,15 +44,8 @@ class TextPromptDataset(Dataset):
 
 
 class DefaultSafetyFilter:
-    """The default safety filter.
+    """The default safety filter."""
 
-    >>> safety_filter = SafetyFilter()
-    >>> safety_filter.setup()
-    >>> nsfw_content = safety_checker(pil_results)
-    >>> for i, nsfw in enumerate(nsfw_content):
-            if nsfw:
-                ...
-    """
     def __init__(self) -> None:
         import clip as openai_clip
 
@@ -65,7 +58,7 @@ class DefaultSafetyFilter:
 
         encoded_images = torch.nn.functional.normalize(encoded_images, p=2, dim=1)
         similarity = torch.mm(encoded_images, self.nsfw_embeddings.transpose(0, 1))
-        return torch.any(similarity > 0.24, dim=1).tolist()
+        return torch.any(similarity > 0.3, dim=1).tolist()
 
     def prepare_nsfw_embeddings(self) -> None:
         import clip as openai_clip

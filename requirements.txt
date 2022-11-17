@@ -1,9 +1,7 @@
 torchvision==0.13.0
 jsonargparse[signatures]
-wandb==0.12.16
-gradio>=3.6
 pyyaml==5.4.0
-protobuf<4.21.0  # 4.21 breaks with wandb, tensorboard, or pytorch-lightning: https://github.com/protocolbuffers/protobuf/issues/10048
+protobuf<4.21.0
 lightning_hpo
 lightning
 Pillow>=2.9.0
@@ -15,3 +13,4 @@ transformers==4.24.0
 deepspeed
 ftfy
 lightning-api-access
+clip@git+https://github.com/openai/CLIP.git

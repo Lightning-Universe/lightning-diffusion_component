@@ -2,7 +2,6 @@
 
 Lightning Diffusion provides components to finetune and serve diffusion model on [lightning.ai](https://lightning.ai/).
 
-
 ```python
 import lightning as L
 from lightning_diffusion import BaseDiffusion, DreamBoothInput, DreamBoothTuner, encode_to_base64, models

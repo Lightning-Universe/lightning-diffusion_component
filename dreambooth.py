@@ -52,7 +52,7 @@ class DreamBoothTuner:
     revision: Optional[str] = "fp16"
     tokenizer_name: Optional[str] = None
     max_steps: int = 5
-    prior_loss_weight: float = 1.0
+    prior_loss_weight: float = 1
     train_batch_size: int = 1
     gradient_accumulation_steps: int = 1
     learning_rate: float = 5e-6
@@ -119,8 +119,10 @@ class DreamBoothTuner:
 
         for step, batch in enumerate(train_dataloader):
 
-            # Accumulate gradient `gradient_accumulation_steps` batches at a time
-            is_accumulating = False # step % self.gradient_accumulation_steps != 0
+            if self.gradient_accumulation_steps > 1:
+                is_accumulating = step % self.gradient_accumulation_steps != 0
+            else:
+                is_accumulating = False
 
             with lite.no_backward_sync(model.unet, enabled=is_accumulating):
 
@@ -185,8 +187,8 @@ class DreamBoothTuner:
 
             model.save_pretrained("model.pt")
 
-            drive = Drive("lit://models", component_name="unet")
-            drive.put("model.pt")
+            # drive = Drive("lit://models", component_name="unet")
+            # drive.put("model.pt")
 
         print("Dreambooth finetuning is done!")
 

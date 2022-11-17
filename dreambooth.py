@@ -51,10 +51,10 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         pretrained_model_name_or_path: str = "CompVis/stable-diffusion-v1-4",
         revision: Optional[str] = "fp16",
         tokenizer_name: Optional[str] = None,
-        max_steps: int = 1000,
+        max_steps: int = 5,
         prior_loss_weight: float = 1.0,
         train_batch_size: int = 1,
-        gradient_accumulation_steps: int = 2,
+        gradient_accumulation_steps: int = 1,
         learning_rate: float = 5e-6,
         lr_scheduler = "constant",
         lr_warmup_steps: int = 0,
@@ -64,7 +64,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         use_auth_token: str = "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",
         seed: int = 42,
         gradient_checkpointing: bool = True,
-        cloud_compute: L.CloudCompute = L.CloudCompute("gpu"),
+        cloud_compute: L.CloudCompute = L.CloudCompute("gpu-fast"),
         resolution: int = 512,
         scale_lr: bool = True,
         center_crop: bool = True,
@@ -139,12 +139,12 @@ class _DreamBoothFineTunerWork(L.LightningWork):
 
     def run(self):
 
-        lite = LightningLite(precision=self.precision,  strategy="deepspeed_stage_2")
+        lite = LightningLite(precision=self.precision,  strategy="deepspeed_stage_1")
 
         if self.seed is not None:
             L.seed_everything(self.seed)
 
-        #self.prepare_data(lite)
+        # self.prepare_data(lite)
 
         # # Load the tokenizer
         tokenizer = CLIPTokenizer.from_pretrained(
@@ -247,18 +247,14 @@ class _DreamBoothFineTunerWork(L.LightningWork):
 
         unet.train()
 
-        while step < self.max_steps:
+        while True:
 
             unet.train()
 
             for batch in train_dataloader:
 
                 # Accumulate gradient `gradient_accumulation_steps` batches at a time
-                if self.gradient_accumulation_steps > 1:
-                    is_accumulating = step % self.gradient_accumulation_steps != 0
-
-                else:
-                    is_accumulating = False
+                is_accumulating = False# step % self.gradient_accumulation_steps != 0
 
                 with lite.no_backward_sync(unet, enabled=is_accumulating):
 
@@ -301,30 +297,31 @@ class _DreamBoothFineTunerWork(L.LightningWork):
                     else:
                         loss = F.mse_loss(noise_pred.float(), noise.float(), reduction="mean")
 
-                    print(loss)
-
                     lite.backward(loss)
 
                 # Step the optimizer every 8 batches
                 if not is_accumulating:
                     optimizer.step()
                     optimizer.zero_grad()
+                    step += 1
+    
+                if lite.is_global_zero:
+                    print(f"Step {step}/{self.max_steps}: {loss}")
 
-                step += 1
+                if step >= self.max_steps:
+                    break
 
-        # # Create the pipeline using using the trained modules and save it.
+            if step >= self.max_steps:
+                break
+
+        torch.distributed.destroy_process_group()
+
         if lite.is_global_zero:
-            pipeline = StableDiffusionPipeline.from_pretrained(
-                self.pretrained_model_name_or_path,
-                unet=unet.module, # TODO: Add un-wrapping.
-                text_encoder=text_encoder,
-                revision=self.revision,
-                use_auth_token=self.use_auth_token,
-            )
-            pipeline.save_pretrained("model.pt")
-
-            self.model_path = Path("model.pt")
-
+            # TODO: Implement DeepSpeed saving in Lite.
+            torch.save(unet.module, "model.pt")
+            # self.model_path = Path("model.pt")
+        
+        print("Done")
 
 
     def prepare_data(self, lite):
@@ -358,7 +355,6 @@ class _DreamBoothFineTunerWork(L.LightningWork):
                         f.write(chunk)
             else:
                 print(f"The image from {image_url} doesn't exist.")
-
 
     def _generate_preservation_images(self, lite: LightningLite):
 
@@ -400,7 +396,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         gc.collect()
         del pipeline
         with torch.no_grad():
-          torch.cuda.empty_cache()
+            torch.cuda.empty_cache()
 
 
 class DreamBoothFineTuner(LiteMultiNode):
@@ -408,7 +404,7 @@ class DreamBoothFineTuner(LiteMultiNode):
     def __init__(
         self,
         *args,
-        cloud_compute = L.CloudCompute("gpu"),
+        cloud_compute = L.CloudCompute("gpu-fast"),
         num_nodes: int = 1, 
         **kwargs
     ):

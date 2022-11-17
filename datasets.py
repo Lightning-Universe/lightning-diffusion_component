@@ -17,7 +17,7 @@ class DreamBoothDataset(Dataset):
         center_crop=False,
     ):
         self.size = size # image size
-        self.center_crop = center_crop 
+        self.center_crop = center_crop
         self.tokenizer = tokenizer
 
         # check if image folder exist

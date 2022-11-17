@@ -11,7 +11,7 @@ import gc
 import torch.nn.functional as F
 from lightning.app.components import LiteMultiNode
 from functools import partial
-from lightning.app.storage import Path
+from lightning.app.storage import Drive
 
 
 def collate_fn(examples, tokenizer, preservation_prompt):
@@ -48,23 +48,22 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         image_urls: List[str],
         prompt: str,
         preservation_prompt: Optional[str] = None,
+        num_preservation_images: int = 25,
         pretrained_model_name_or_path: str = "CompVis/stable-diffusion-v1-4",
         revision: Optional[str] = "fp16",
         tokenizer_name: Optional[str] = None,
-        max_steps: int = 1000,
+        max_steps: int = 5,
         prior_loss_weight: float = 1.0,
         train_batch_size: int = 1,
-        gradient_accumulation_steps: int = 2,
+        gradient_accumulation_steps: int = 1,
         learning_rate: float = 5e-6,
         lr_scheduler = "constant",
         lr_warmup_steps: int = 0,
-        max_train_steps: int = 400,
         precision: int = 16,
-        use_8bit_adam: bool = True,
         use_auth_token: str = "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",
         seed: int = 42,
         gradient_checkpointing: bool = True,
-        cloud_compute: L.CloudCompute = L.CloudCompute("gpu"),
+        cloud_compute: L.CloudCompute = L.CloudCompute("gpu-fast"),
         resolution: int = 512,
         scale_lr: bool = True,
         center_crop: bool = True,
@@ -76,6 +75,9 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         DreamBooth: Fine Tuning Text-to-Image Diffusion Models for Subject-Driven Generation
         https://arxiv.org/abs/2208.12242
 
+        The code is highly inspired from the diffusers `train_dreambooth.py` script:
+        https://github.com/ShivamShrirao/diffusers/blob/main/examples/dreambooth/train_dreambooth.py.
+
         Arguments:
             image_urls: List of image urls to fine-tune the models.
             prompt: The prompt to describe the images.
@@ -83,6 +85,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
                 the diffusion model to learn about this new concept.
             preservation_prompt: The prompt used for the diffusion model to preserve knowledge.
                 Example: `A dog`
+            num_preservation_images: The number of images to preserve the model abilities.
             pretrained_model_name_or_path: The name of the model.
             revision: The revision commit for the model weights.
             tokenizer_name: The name of the tokenizer.
@@ -92,9 +95,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
             learning_rate: The learning rate to optimize the model.
             lr_scheduler: The LR scheduler to be used.
             lr_warmup_steps: The number of warmup steps.
-            max_train_steps: The number of training steps to fine-tune the model.
             precision: The precision to be used for fine-tuning the model.
-            use_8bit_adam: Whether to use 8 bit adam.
             seed: The seed to initialize the random initializers.
             resolution: The resolution of the image to train upon.
             center_crop: Whether to crop the images in the center
@@ -112,22 +113,18 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         self.max_steps = max_steps
         self.prior_loss_weight = prior_loss_weight
         self.train_batch_size = train_batch_size
+        self.num_preservation_images = num_preservation_images
         self.gradient_accumulation_steps = gradient_accumulation_steps
         self.learning_rate = learning_rate
         self.lr_scheduler = lr_scheduler
         self.lr_warmup_steps = lr_warmup_steps
-        self.max_train_steps = max_train_steps
         self.precision = precision
         self.use_auth_token = use_auth_token
-        self.use_8bit_adam = use_8bit_adam
         self.gradient_checkpointing = gradient_checkpointing
         self.seed = seed
         self.resolution = resolution
         self.center_crop = center_crop
         self.scale_lr = scale_lr
-
-        # Captured at the end of the training.
-        self.model_path = None
 
     @property
     def user_images_data_dir(self) -> str:
@@ -139,12 +136,12 @@ class _DreamBoothFineTunerWork(L.LightningWork):
 
     def run(self):
 
-        lite = LightningLite(precision=self.precision,  strategy="deepspeed_stage_2")
+        lite = LightningLite(precision=self.precision, strategy="deepspeed_stage_2_offload")
+
+        self.prepare_data(lite)
 
         if self.seed is not None:
             L.seed_everything(self.seed)
-
-        #self.prepare_data(lite)
 
         # # Load the tokenizer
         tokenizer = CLIPTokenizer.from_pretrained(
@@ -175,12 +172,13 @@ class _DreamBoothFineTunerWork(L.LightningWork):
             use_auth_token=self.use_auth_token,
         )
 
-        # Freeze the var and text encoder
+        # Freeze the var and text encoder
         vae.requires_grad_(False)
         text_encoder.requires_grad_(False)
 
         if self.gradient_checkpointing:
             unet.enable_gradient_checkpointing()
+            text_encoder.gradient_checkpointing_enable()
 
         world_size = int(os.getenv("WORLD_SIZE", 1))
 
@@ -190,17 +188,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
             )
 
         # # Use 8-bit Adam for lower memory usage or to fine-tune the model in 16GB GPUs
-        if self.use_8bit_adam:
-            try:
-                import bitsandbytes as bnb
-            except ImportError:
-                raise ImportError(
-                    "To use 8-bit Adam, please install the bitsandbytes library: `pip install bitsandbytes`."
-                )
-
-            optimizer_class = bnb.optim.AdamW8bit
-        else:
-            optimizer_class = torch.optim.AdamW
+        optimizer_class = torch.optim.AdamW
 
         params_to_optimize = unet.parameters()
         optimizer = optimizer_class(
@@ -222,6 +210,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
             tokenizer=tokenizer,
             size=self.resolution,
             center_crop=self.center_crop,
+            length=self.max_steps,
         )
 
         train_dataloader = torch.utils.data.DataLoader(
@@ -237,94 +226,82 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         dtype = torch.float32
         if self.precision == 16:
             dtype = torch.float16
-        elif self.mixed_precision == "bf16":
+        elif self.precision == "bf16":
             dtype = torch.bfloat16
 
         vae = vae.to(device=lite.device, dtype=dtype)
         text_encoder = text_encoder.to(device=lite.device, dtype=dtype)
 
-        step = 0
 
         unet.train()
 
-        while step < self.max_steps:
+        for step, batch in enumerate(train_dataloader):
 
-            unet.train()
+            # Accumulate gradient `gradient_accumulation_steps` batches at a time
+            is_accumulating = False # step % self.gradient_accumulation_steps != 0
 
-            for batch in train_dataloader:
+            with lite.no_backward_sync(unet, enabled=is_accumulating):
 
-                # Accumulate gradient `gradient_accumulation_steps` batches at a time
-                if self.gradient_accumulation_steps > 1:
-                    is_accumulating = step % self.gradient_accumulation_steps != 0
+                with torch.no_grad():
+                    # Convert images to latent space
+                    latents = vae.encode(batch["pixel_values"].to(lite.device, dtype=dtype)).latent_dist.sample()
+                    latents = latents * 0.18215
 
+                # Sample noise that we'll add to the latents
+                noise = torch.randn_like(latents, device=lite.device, dtype=dtype)
+                bsz = latents.shape[0]
+
+                # Sample a random timestep for each image
+                timesteps = torch.randint(0, noise_scheduler.config.num_train_timesteps, (bsz,), device=lite.device).long()
+
+                # Add noise to the latents according to the noise magnitude at each timestep
+                # (this is the forward diffusion process)
+                noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
+
+                with torch.no_grad():
+                    # Get the text embedding for conditioning
+                    encoder_hidden_states = text_encoder(batch["input_ids"].to(lite.device))[0]
+
+                # Predict the noise residual
+                noise_pred = unet(noisy_latents, timesteps, encoder_hidden_states).sample
+
+                if self.preservation_prompt:
+                    # Chunk the noise and noise_pred into two parts and compute the loss on each part separately.
+                    noise_pred, noise_pred_prior = torch.chunk(noise_pred, 2, dim=0)
+                    noise, noise_prior = torch.chunk(noise, 2, dim=0)
+
+                    # Compute instance loss
+                    loss = F.mse_loss(noise_pred.float(), noise.float(), reduction="none").mean([1, 2, 3]).mean()
+
+                    # Compute prior loss
+                    prior_loss = F.mse_loss(noise_pred_prior.float(), noise_prior.float(), reduction="mean")
+
+                    # Add the prior loss to the instance loss.
+                    loss = loss + self.prior_loss_weight * prior_loss
                 else:
-                    is_accumulating = False
+                    loss = F.mse_loss(noise_pred.float(), noise.float(), reduction="mean")
 
-                with lite.no_backward_sync(unet, enabled=is_accumulating):
+                lite.backward(loss)
 
-                    with torch.no_grad():
-                        # Convert images to latent space
-                        latents = vae.encode(batch["pixel_values"].to(lite.device, dtype=dtype)).latent_dist.sample()
-                        latents = latents * 0.18215
-
-                    # Sample noise that we'll add to the latents
-                    noise = torch.randn_like(latents, device=lite.device, dtype=dtype)
-                    bsz = latents.shape[0]
-
-                    # Sample a random timestep for each image
-                    timesteps = torch.randint(0, noise_scheduler.config.num_train_timesteps, (bsz,), device=lite.device).long()
-
-                    # Add noise to the latents according to the noise magnitude at each timestep
-                    # (this is the forward diffusion process)
-                    noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
-
-                    with torch.no_grad():
-                        # Get the text embedding for conditioning
-                        encoder_hidden_states = text_encoder(batch["input_ids"].to(lite.device))[0]
-
-                    # Predict the noise residual
-                    noise_pred = unet(noisy_latents, timesteps, encoder_hidden_states).sample
-
-                    if self.preservation_prompt:
-                        # Chunk the noise and noise_pred into two parts and compute the loss on each part separately.
-                        noise_pred, noise_pred_prior = torch.chunk(noise_pred, 2, dim=0)
-                        noise, noise_prior = torch.chunk(noise, 2, dim=0)
-
-                        # Compute instance loss
-                        loss = F.mse_loss(noise_pred.float(), noise.float(), reduction="none").mean([1, 2, 3]).mean()
-
-                        # Compute prior loss
-                        prior_loss = F.mse_loss(noise_pred_prior.float(), noise_prior.float(), reduction="mean")
-
-                        # Add the prior loss to the instance loss.
-                        loss = loss + self.prior_loss_weight * prior_loss
-                    else:
-                        loss = F.mse_loss(noise_pred.float(), noise.float(), reduction="mean")
-
-                    print(loss)
-
-                    lite.backward(loss)
-
-                # Step the optimizer every 8 batches
-                if not is_accumulating:
-                    optimizer.step()
-                    optimizer.zero_grad()
-
+            # Step the optimizer every 8 batches
+            if not is_accumulating:
+                optimizer.step()
+                optimizer.zero_grad()
                 step += 1
 
-        # # Create the pipeline using using the trained modules and save it.
+            if lite.is_global_zero:
+                print(f"Step {step}/{self.max_steps}: {loss}")
+
+        torch.distributed.destroy_process_group()
+
         if lite.is_global_zero:
-            pipeline = StableDiffusionPipeline.from_pretrained(
-                self.pretrained_model_name_or_path,
-                unet=unet.module, # TODO: Add un-wrapping.
-                text_encoder=text_encoder,
-                revision=self.revision,
-                use_auth_token=self.use_auth_token,
-            )
-            pipeline.save_pretrained("model.pt")
+            # TODO: Implement DeepSpeed saving in Lite.
+            torch.save(unet.module, "model.pt")
 
-            self.model_path = Path("model.pt")
+            drive = Drive("lit://models", component_name="unet")
+            drive.put("model.pt")
 
+        print("Dreambooth finetuning is done!")
 
 
     def prepare_data(self, lite):
@@ -359,7 +336,6 @@ class _DreamBoothFineTunerWork(L.LightningWork):
             else:
                 print(f"The image from {image_url} doesn't exist.")
 
-
     def _generate_preservation_images(self, lite: LightningLite):
 
         os.makedirs(self.preservation_images_data_dir, exist_ok=True)
@@ -372,25 +348,27 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         )
         pipeline.enable_attention_slicing()
 
-        user_images = os.path.join(os.getcwd(), "data", 'user_images')
-
-        num_new_images = os.listdir(user_images)
-
-        sample_dataset = PromptDataset(self.preservation_prompt, len(num_new_images))
+        sample_dataset = PromptDataset(self.preservation_prompt, self.num_preservation_images)
         sample_dataloader = torch.utils.data.DataLoader(
-            sample_dataset, 
+            sample_dataset,
             batch_size=2,
         )
 
         sample_dataloader = lite.setup_dataloaders(sample_dataloader)
         pipeline.to(lite.device)
 
-        L = len(os.listdir(self.user_images_data_dir))
+        L = len(os.listdir(self.preservation_images_data_dir))
 
         counter = 0
 
         for example in sample_dataloader:
-            images = pipeline(example["prompt"]).images
+
+            if (L + counter) >= self.num_preservation_images:
+                break
+
+            with torch.inference_mode():
+                images = pipeline(example["prompt"]).images
+
             for image in images:
                 path = os.path.join(self.preservation_images_data_dir, f"{counter + L}.jpg")
                 image.save(path)
@@ -400,7 +378,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         gc.collect()
         del pipeline
         with torch.no_grad():
-          torch.cuda.empty_cache()
+            torch.cuda.empty_cache()
 
 
 class DreamBoothFineTuner(LiteMultiNode):
@@ -408,8 +386,8 @@ class DreamBoothFineTuner(LiteMultiNode):
     def __init__(
         self,
         *args,
-        cloud_compute = L.CloudCompute("gpu"),
-        num_nodes: int = 1, 
+        cloud_compute = L.CloudCompute("gpu-fast"),
+        num_nodes: int = 1,
         **kwargs
     ):
         super().__init__(

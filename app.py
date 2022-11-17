@@ -13,7 +13,7 @@ app = L.LightningApp(
         prompt="a photo of sks toy", # `sks` is the special name
         preservation_prompt="a photo of a cat clay toy",
         learning_rate=5e-06,
-        max_train_steps=450,
+        max_steps=50,
         cloud_compute=L.CloudCompute("gpu-fast"),
     )
 )

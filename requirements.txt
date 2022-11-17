@@ -8,9 +8,10 @@ lightning_hpo
 lightning
 Pillow>=2.9.0
 numpy>=1.9.2
-diffusers==0.4.1 
+tensorflow
+diffusers==0.4.1
+tensorboard
 transformers
-deepspeed 
-bitsandbytes
+deepspeed
 ftfy
 lightning-api-access

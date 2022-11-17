@@ -33,10 +33,6 @@ def create_feature_extractor():
 def create_safety_checker():
     return None
 
-extras = {
-        "revision": "fp16",
-        "use_auth_token": "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",
-} 
 
 def get_kwargs(pretrained_model_name_or_path: str, drive = None) -> Dict[str, str]:
     kwargs = {

@@ -47,7 +47,7 @@ class DreamBoothTuner:
     prompt: str
     preservation_prompt: str
     validation_prompt: str
-    num_preservation_images: int = 25
+    num_preservation_images: int = 100
     pretrained_model_name_or_path: str = "CompVis/stable-diffusion-v1-4"
     revision: Optional[str] = "fp16"
     tokenizer_name: Optional[str] = None

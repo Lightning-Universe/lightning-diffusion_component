@@ -7,8 +7,10 @@ class DreamBoothDiffusion(BaseDiffusion):
 
     def setup(self):
         self._model = StableDiffusionPipeline.from_pretrained(
-            "CompVis/stable-diffusion-v1-4",
-            **models.get_extras(self.weights_drive),
+            **models.get_kwargs(
+                pretrained_model_name_or_path="CompVis/stable-diffusion-v1-4",
+                drive=self.weights_drive,
+            ),
         )
 
     def finetune(self):

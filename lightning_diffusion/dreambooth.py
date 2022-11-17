@@ -56,7 +56,7 @@ class DreamBoothTuner:
 
     image_urls: List[str]
     prompt: str
-    num_preservation_images: int = 100
+    num_preservation_images: int = 5
     max_steps: int = 2
     prior_loss_weight: float = 1
     train_batch_size: int = 1
@@ -143,7 +143,7 @@ class DreamBoothTuner:
 
             with lite.no_backward_sync(model.unet, enabled=is_accumulating):
 
-                with torch.no_grad():
+                with torch.inference_mode():
                     # Convert images to latent space
                     latents = model.vae.encode(batch["pixel_values"].to(lite.device, dtype=dtype)).latent_dist.sample()
                     latents = latents * 0.18215
@@ -159,7 +159,7 @@ class DreamBoothTuner:
                 # (this is the forward diffusion process)
                 noisy_latents = model.scheduler.add_noise(latents, noise, timesteps)
 
-                with torch.no_grad():
+                with torch.inference_mode():
                     # Get the text embedding for conditioning
                     encoder_hidden_states = model.text_encoder(batch["input_ids"].to(lite.device))[0]
 
@@ -206,6 +206,9 @@ class DreamBoothTuner:
 
             drive = Drive("lit://weights", component_name="models")
             drive.put("model.pt")
+
+            drive = Drive("lit://data", component_name="images")
+            drive.put("data")
 
         print("Dreambooth finetuning is done!")
 

@@ -76,10 +76,6 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
     def model(self):
         return self._model
 
-    @property
-    def tuner_config(self):
-        return self._tuner_config
-
     @abc.abstractmethod
     def setup(self, *args, **kwargs):
         pass

@@ -48,6 +48,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         image_urls: List[str],
         prompt: str,
         preservation_prompt: Optional[str] = None,
+        num_preservation_images: int = 25,
         pretrained_model_name_or_path: str = "CompVis/stable-diffusion-v1-4",
         revision: Optional[str] = "fp16",
         tokenizer_name: Optional[str] = None,
@@ -58,7 +59,6 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         learning_rate: float = 5e-6,
         lr_scheduler = "constant",
         lr_warmup_steps: int = 0,
-        max_train_steps: int = 400,
         precision: int = 16,
         use_auth_token: str = "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",
         seed: int = 42,
@@ -85,6 +85,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
                 the diffusion model to learn about this new concept.
             preservation_prompt: The prompt used for the diffusion model to preserve knowledge.
                 Example: `A dog`
+            num_preservation_images: The number of images to preserve the model abilities.
             pretrained_model_name_or_path: The name of the model.
             revision: The revision commit for the model weights.
             tokenizer_name: The name of the tokenizer.
@@ -94,7 +95,6 @@ class _DreamBoothFineTunerWork(L.LightningWork):
             learning_rate: The learning rate to optimize the model.
             lr_scheduler: The LR scheduler to be used.
             lr_warmup_steps: The number of warmup steps.
-            max_train_steps: The number of training steps to fine-tune the model.
             precision: The precision to be used for fine-tuning the model.
             seed: The seed to initialize the random initializers.
             resolution: The resolution of the image to train upon.
@@ -113,11 +113,11 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         self.max_steps = max_steps
         self.prior_loss_weight = prior_loss_weight
         self.train_batch_size = train_batch_size
+        self.num_preservation_images = num_preservation_images
         self.gradient_accumulation_steps = gradient_accumulation_steps
         self.learning_rate = learning_rate
         self.lr_scheduler = lr_scheduler
         self.lr_warmup_steps = lr_warmup_steps
-        self.max_train_steps = max_train_steps
         self.precision = precision
         self.use_auth_token = use_auth_token
         self.gradient_checkpointing = gradient_checkpointing
@@ -138,10 +138,10 @@ class _DreamBoothFineTunerWork(L.LightningWork):
 
         lite = LightningLite(precision=self.precision, strategy="deepspeed_stage_2_offload")
 
+        self.prepare_data(lite)
+
         if self.seed is not None:
             L.seed_everything(self.seed)
-
-        self.prepare_data(lite)
 
         # # Load the tokenizer
         tokenizer = CLIPTokenizer.from_pretrained(
@@ -348,9 +348,7 @@ class _DreamBoothFineTunerWork(L.LightningWork):
         )
         pipeline.enable_attention_slicing()
 
-        num_samples = min(self.max_steps, 300)
-
-        sample_dataset = PromptDataset(self.preservation_prompt, num_samples)
+        sample_dataset = PromptDataset(self.preservation_prompt, self.num_preservation_images)
         sample_dataloader = torch.utils.data.DataLoader(
             sample_dataset,
             batch_size=2,
@@ -367,8 +365,10 @@ class _DreamBoothFineTunerWork(L.LightningWork):
 
             if (L + counter) >= num_samples:
                 break
+            
+            with torch.inference_mode():
+                images = pipeline(example["prompt"]).images
 
-            images = pipeline(example["prompt"]).images
             for image in images:
                 path = os.path.join(self.preservation_images_data_dir, f"{counter + L}.jpg")
                 image.save(path)

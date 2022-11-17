@@ -48,6 +48,7 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
         if not is_overridden("predict", instance=self, parent=BaseDiffusion):
             raise Exception("The predict method needs to be overriden.")
 
+        self._model = None
         self.finetuner = None
         if is_overridden("finetune", instance=self, parent=BaseDiffusion):
             self.finetuner = LambdaWork(self.finetune, parallel=False)

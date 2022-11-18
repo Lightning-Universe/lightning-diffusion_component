@@ -41,16 +41,6 @@ def collate_fn(examples, tokenizer, preservation_prompt):
     return batch
 
 
-def prompt_generation(prompt):
-    prompt = re.findall(r"\[([^]]*)\]",prompt)
-    if len(prompt)!=3:
-        raise Exception("Your validation form must have the form: a photo of a [personal name] [class] [validation/complement]")
-    else:
-        prompt = f"a photo of a {prompt[0]} {prompt[1]}"
-        preservation_prompt = f"a photo of a {prompt[1]}"
-        validation_prompt = f"a photo of a {prompt[0]} {prompt[1]} {prompt[1]}"
-
-
 @dataclass
 class DreamBoothTuner:
 

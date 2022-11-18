@@ -11,11 +11,6 @@ class ServeDiffusion(BaseDiffusion):
             **models.extras
         ).to("cuda" if torch.cuda.is_available() else "cpu")
 
-    def serialize(self, image):
-        buffered = io.BytesIO()
-        image.save(buffered, format="PNG")
-        return base64.b64encode(buffered.getvalue()).decode("utf-8")
-
     def predict(self, data):
         out = self._model(prompt=data.prompt)
         return {"image": self.serialize(out[0][0])}

@@ -1,4 +1,6 @@
 import abc
+import base64
+import io
 from copy import deepcopy
 
 import lightning as L
@@ -54,6 +56,12 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
             self.finetuner = LambdaWork(self.finetune, parallel=False)
         self.load_balancer = LoadBalancer(
             DiffusionServe(parent_flow=trimmed_flow(self), cloud_compute=serve_cloud_compute), num_replicas=num_replicas)
+
+    @staticmethod
+    def serialize(image):
+        buffered = io.BytesIO()
+        image.save(buffered, format="PNG")
+        return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
     @property
     def model(self):

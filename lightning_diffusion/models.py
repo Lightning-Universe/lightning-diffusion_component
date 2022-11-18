@@ -1,7 +1,7 @@
 from transformers import CLIPTextModel, CLIPTokenizer
 from diffusers import AutoencoderKL, DDPMScheduler, UNet2DConditionModel
 from lightning.app.storage import Drive
-# from diffusers.pipelines.stable_diffusion import StableDiffusionSafetyChecker
+from typing import Dict
 import torch
 
 
@@ -32,11 +32,18 @@ def create_feature_extractor():
 def create_safety_checker():
     return None
 
-def get_extras(drive = None):
-    if drive.list() == ["model.pt"]:
-        pass
 
-    return {
+def get_kwargs(pretrained_model_name_or_path: str, drive = None) -> Dict[str, str]:
+    kwargs = {
         "revision": "fp16",
         "use_auth_token": "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",
+        "pretrained_model_name_or_path": pretrained_model_name_or_path
     } 
+
+    if drive.list() == ["model.pt"]:
+        drive.get("model.pt", overwrite=True)
+        kwargs = {"pretrained_model_name_or_path": "./model.pt"}
+
+    print(kwargs)
+
+    return kwargs

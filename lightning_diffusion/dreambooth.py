@@ -57,7 +57,7 @@ class DreamBoothTuner:
     image_urls: List[str]
     prompt: str
     num_preservation_images: int = 100
-    max_steps: int = 2
+    max_steps: int = 450
     prior_loss_weight: float = 1
     train_batch_size: int = 1
     gradient_accumulation_steps: int = 1
@@ -126,11 +126,11 @@ class DreamBoothTuner:
 
     def run(self, model: Optional[StableDiffusionPipeline]):
         assert model
-        lite = LightningLite(precision=self.precision, strategy="deepspeed_stage_2_offload")
+        lite = LightningLite(precision=16, strategy="deepspeed_stage_2_offload")
 
         self.setup(lite, model)
 
-        optimizer, dtype = self.prepare_model(lite, model)
+        unet, optimizer, dtype = self.prepare_model(lite, model)
 
         train_dataloader = self.prepare_data(lite, model)
 
@@ -197,15 +197,19 @@ class DreamBoothTuner:
 
         if lite.is_global_zero:
 
-            self.evaluate_model(model)
+            safety_checker = self.evaluate_model(model)
 
             # TODO: Implement DeepSpeed saving in Lite.
-            model.unet = model.unet.module
+            model.unet = unet
+            model.safety_checker = safety_checker
 
             model.save_pretrained("model.pt")
 
             drive = Drive("lit://weights", component_name="models")
             drive.put("model.pt")
+
+            drive = Drive("lit://data", component_name="images")
+            drive.put("data")
 
         print("Dreambooth finetuning is done!")
 
@@ -248,7 +252,9 @@ class DreamBoothTuner:
             lr=self.learning_rate,
         )
 
-        model.unet, optimizer = lite.setup(model.unet, optimizer)  # Scale your model / optimizers
+        unet = model.unet
+
+        model.unet, optimizer = lite.setup(unet, optimizer)  # Scale your model / optimizers
 
         dtype = torch.float32
         if self.precision == 16:
@@ -261,7 +267,7 @@ class DreamBoothTuner:
 
         model.unet.train()
 
-        return optimizer, dtype
+        return unet, optimizer, dtype
 
     def prepare_data(self, lite: LightningLite, model):
         train_dataset = DreamBoothDataset(
@@ -347,6 +353,7 @@ class DreamBoothTuner:
 
         model.vae = model.vae.to(torch.float32)
         model.text_encoder = model.text_encoder.to(torch.float32)
+        safety_checker = model.safety_checker
         model.safety_checker = None
 
         with torch.inference_mode():
@@ -356,3 +363,5 @@ class DreamBoothTuner:
                 path = os.path.join(self.validation_images_data_dir, f"{counter}.jpg")
                 image.save(path)
                 counter += 1
+
+        return safety_checker

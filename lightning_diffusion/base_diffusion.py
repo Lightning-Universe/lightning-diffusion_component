@@ -1,7 +1,7 @@
 import abc
 import base64
 import io
-
+import os
 import lightning as L
 from typing import Optional
 from copy import deepcopy
@@ -60,6 +60,7 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
 
         self.weights_drive = Drive("lit://weights")
         self._model = None
+        self._device = None
 
         _trimmed_flow = trimmed_flow(self)
 
@@ -81,16 +82,16 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
         image.save(buffered, format="PNG")
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
-    @staticmethod
-    def serialize(image):
-        buffered = io.BytesIO()
-        image.save(buffered, format="PNG")
-        return base64.b64encode(buffered.getvalue()).decode("utf-8")
-
     @property
     def model(self) -> StableDiffusionPipeline:
         assert self._model
         return self._model
+
+    @property
+    def device(self):
+        import torch
+        local_rank = os.getenv("LOCAL_RANK", "0")
+        return f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu"
 
     @abc.abstractmethod
     def setup(self, *args, **kwargs):

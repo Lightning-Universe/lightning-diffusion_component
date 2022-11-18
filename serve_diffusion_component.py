@@ -9,7 +9,7 @@ class ServeDiffusion(BaseDiffusion):
         self._model = diffusers.StableDiffusionPipeline.from_pretrained(
             "CompVis/stable-diffusion-v1-4",
             **models.extras
-        ).to("cuda" if torch.cuda.is_available() else "cpu")
+        ).to(self.device)
 
     def predict(self, data):
         out = self.model(prompt=data.prompt)

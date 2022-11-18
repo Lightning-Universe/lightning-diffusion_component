@@ -99,8 +99,7 @@ class DreamBoothTuner:
         else:
             self.prompt = f"a photo of a {prompt[0]} {prompt[1]}"
             self.preservation_prompt = f"a photo of a {prompt[1]}"
-            self.validation_prompt = f"a photo of a {prompt[0]} {prompt[1]} {prompt[1]}"
-
+            self.validation_prompt = f"a photo of a {prompt[0]} {prompt[1]} {prompt[2]}"
 
     @property
     def user_images_data_dir(self) -> str:

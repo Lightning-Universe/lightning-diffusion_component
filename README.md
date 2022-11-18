@@ -1,9 +1,8 @@
 # Lightning Diffusion
 
-Lightning Diffusion provides components to finetune and serve diffusion model on [lightning.ai](https://lightning.ai/).
+Lightning Diffusion provides components to finetune and serve diffusion model on [lightning.ai](https://lightning.ai/). For example, save this code snippet as `app.py` and run the below commands
 
 ```python
-# save this file as app.py
 # !pip install torch diffusers lightning_diffusion@git+https://github.com/Lightning-AI/lightning-diffusion.git
 import lightning as L
 import torch, diffusers

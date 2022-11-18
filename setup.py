@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-
 import os
-from importlib.util import module_from_spec, spec_from_file_location
 
 from setuptools import find_packages, setup
 

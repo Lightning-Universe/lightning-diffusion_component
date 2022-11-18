@@ -7,7 +7,6 @@ from pydantic import BaseModel
 
 class DreamBoothInput(BaseModel):
     prompt: str  # text prompt
-    quality: str  # "low", "medium", "high"
 
     @staticmethod
     def _get_sample_data() -> Dict[Any, Any]:

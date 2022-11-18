@@ -9,6 +9,7 @@ from lightning.app.utilities.app_helpers import is_overridden
 from lightning_diffusion.diffusion_serve import DiffusionServe
 from lightning_diffusion.lite_finetuner import Finetuner
 from lightning.app.storage import Drive
+from diffusers import StableDiffusionPipeline
 
 
 def trimmed_flow(flow: 'L.LightningFlow') -> 'L.LightningFlow':
@@ -87,7 +88,8 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
     @property
-    def model(self):
+    def model(self) -> StableDiffusionPipeline:
+        assert self._model
         return self._model
 
     @abc.abstractmethod

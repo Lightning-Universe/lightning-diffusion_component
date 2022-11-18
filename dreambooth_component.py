@@ -23,8 +23,9 @@ class ServeDreamBoothDiffusion(BaseDiffusion):
         ).run(self.model)
 
     def predict(self, data):
-        images = self.model(prompt=data.prompt)[0]
-        return {"images": self.serialize(images)}
+        out = self.model(prompt=data.prompt)
+        return {"image": self.serialize(out[0][0])}
+
 
 
 app = L.LightningApp(

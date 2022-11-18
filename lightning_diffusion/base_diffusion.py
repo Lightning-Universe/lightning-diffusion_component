@@ -80,6 +80,12 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
         image.save(buffered, format="PNG")
         return base64.b64encode(buffered.getvalue()).decode("utf-8")
 
+    @staticmethod
+    def serialize(image):
+        buffered = io.BytesIO()
+        image.save(buffered, format="PNG")
+        return base64.b64encode(buffered.getvalue()).decode("utf-8")
+
     @property
     def model(self):
         return self._model

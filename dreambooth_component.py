@@ -29,7 +29,7 @@ class ServeDreamBoothDiffusion(BaseDiffusion):
 
 app = L.LightningApp(
     ServeDreamBoothDiffusion(
-        serve_cloud_compute=L.CloudCompute("gpu"),
-        finetune_cloud_compute=L.CloudCompute("gpu-fast"),
+        serve_cloud_compute=L.CloudCompute("gpu", disk_size=80),
+        finetune_cloud_compute=L.CloudCompute("gpu-fast", disk_size=80),
     )
 )

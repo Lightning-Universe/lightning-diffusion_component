@@ -3,6 +3,8 @@
 Lightning Diffusion provides components to finetune and serve diffusion model on [lightning.ai](https://lightning.ai/).
 
 ```python
+# save this file as app.py
+# !pip install torch diffusers lightning_diffusion@git+https://github.com/Lightning-AI/lightning-diffusion.git
 import lightning as L
 import torch, diffusers
 from lightning_diffusion import BaseDiffusion, models
@@ -17,9 +19,21 @@ class ServeDiffusion(BaseDiffusion):
         ).to("cuda" if torch.cuda.is_available() else "cpu")
 
     def predict(self, data):
-        out = self._model(prompt=data.prompt)
+        out = self._model(prompt=data.prompt, num_inference_steps=23)
         return {"image": self.serialize(out[0][0])}
 
 
 app = L.LightningApp(ServeDiffusion())
+```
+
+### Running locally
+
+```bash
+lightning run app app.py --setup
+```
+
+### Running on cloud
+
+```bash
+lightning run app app.py --setup --cloud
 ```

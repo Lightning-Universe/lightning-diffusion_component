@@ -56,8 +56,8 @@ class DreamBoothTuner:
 
     image_urls: List[str]
     prompt: str
-    num_preservation_images: int = 5
-    max_steps: int = 2
+    num_preservation_images: int = 100
+    max_steps: int = 450
     prior_loss_weight: float = 1
     train_batch_size: int = 1
     gradient_accumulation_steps: int = 1
@@ -126,7 +126,7 @@ class DreamBoothTuner:
 
     def run(self, model: Optional[StableDiffusionPipeline]):
         assert model
-        lite = LightningLite(precision=self.precision, strategy="deepspeed_stage_2_offload")
+        lite = LightningLite(precision=16, strategy="deepspeed_stage_2_offload")
 
         self.setup(lite, model)
 

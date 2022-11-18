@@ -8,14 +8,11 @@ from lightning_diffusion import BaseDiffusion, DreamBoothInput, DreamBoothTuner,
 from diffusers import StableDiffusionPipeline
 
 
-class DreamBoothDiffusion(BaseDiffusion):
+class ServeDreamBoothDiffusion(BaseDiffusion):
 
     def setup(self):
         self._model = StableDiffusionPipeline.from_pretrained(
-            **models.get_kwargs(
-                pretrained_model_name_or_path="CompVis/stable-diffusion-v1-4",
-                drive=self.weights_drive,
-            ),
+            **models.get_kwargs("CompVis/stable-diffusion-v1-4", self.weights_drive),
         )
 
     def finetune(self):
@@ -36,7 +33,7 @@ class DreamBoothDiffusion(BaseDiffusion):
 
 
 app = L.LightningApp(
-    DreamBoothDiffusion(
+    ServeDreamBoothDiffusion(
         serve_cloud_compute=L.CloudCompute("gpu"),
         finetune_cloud_compute=L.CloudCompute("gpu-fast"),
     )

@@ -3,7 +3,7 @@ from lightning_diffusion import BaseDiffusion, DreamBoothInput, DreamBoothTuner,
 from diffusers import StableDiffusionPipeline
 
 
-class DreamBoothDiffusion(BaseDiffusion):
+class ServeDreamBoothDiffusion(BaseDiffusion):
 
     def setup(self):
         self._model = StableDiffusionPipeline.from_pretrained(
@@ -28,7 +28,7 @@ class DreamBoothDiffusion(BaseDiffusion):
 
 
 app = L.LightningApp(
-    DreamBoothDiffusion(
+    ServeDreamBoothDiffusion(
         serve_cloud_compute=L.CloudCompute("gpu"),
         finetune_cloud_compute=L.CloudCompute("gpu-fast"),
     )

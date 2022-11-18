@@ -3,7 +3,6 @@ from diffusers import AutoencoderKL, DDPMScheduler, UNet2DConditionModel
 from lightning.app.storage import Drive
 from typing import Dict
 import torch
-import os
 
 
 HF_TOKEN = "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"
@@ -44,5 +43,7 @@ def get_kwargs(pretrained_model_name_or_path: str, drive = None) -> Dict[str, st
     if drive.list() == ["model.pt"]:
         drive.get("model.pt", overwrite=True)
         kwargs = {"pretrained_model_name_or_path": "./model.pt"}
+
+    print(kwargs)
 
     return kwargs

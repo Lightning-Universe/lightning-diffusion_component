@@ -1,5 +1,5 @@
 import lightning as L
-from lightning_diffusion import BaseDiffusion, DreamBoothInput, DreamBoothTuner, encode_to_base64, models
+from lightning_diffusion import BaseDiffusion, DreamBoothTuner, models
 from diffusers import StableDiffusionPipeline
 
 
@@ -22,9 +22,9 @@ class ServeDreamBoothDiffusion(BaseDiffusion):
             prompt="a photo of [sks] [cat clay toy] [riding a bicycle]",
         ).run(self.model)
 
-    def predict(self, data: DreamBoothInput):
+    def predict(self, data):
         images = self.model(prompt=data.prompt)[0]
-        return {"images": encode_to_base64(images)}
+        return {"images": self.serialize(images)}
 
 
 app = L.LightningApp(

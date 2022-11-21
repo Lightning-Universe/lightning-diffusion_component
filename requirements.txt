@@ -6,9 +6,7 @@ lightning_hpo
 lightning
 Pillow>=2.9.0
 numpy>=1.9.2
-tensorflow
 diffusers==0.7.2
-tensorboard
 transformers==4.24.0
 deepspeed
 ftfy

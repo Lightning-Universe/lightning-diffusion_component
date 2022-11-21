@@ -74,11 +74,11 @@ app = L.LightningApp(
 ### Running locally
 
 ```bash
-lightning run app app.py --setup
+lightning run app {COMPONENT_NAME}.py --setup
 ```
 
 ### Running on cloud
 
 ```bash
-lightning run app app.py --setup --cloud
+lightning run app {COMPONENT_NAME}.py --setup --cloud
 ```

@@ -36,13 +36,12 @@ Use the DreamBooth fine-tuning methodology from the paper `Fine Tuning Text-to-I
 ```python
 import lightning as L
 from lightning_diffusion import BaseDiffusion, DreamBoothTuner, models
-from diffusers import StableDiffusionPipeline
-
+import torch, diffusers
 
 class ServeDreamBoothDiffusion(BaseDiffusion):
 
     def setup(self):
-        self._model = StableDiffusionPipeline.from_pretrained(
+        self._model = diffusers.StableDiffusionPipeline.from_pretrained(
             **models.get_kwargs("CompVis/stable-diffusion-v1-4", self.weights_drive),
         ).to(self.device)
 

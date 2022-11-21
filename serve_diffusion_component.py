@@ -7,7 +7,7 @@ from lightning_diffusion import BaseDiffusion, models
 class ServeDiffusion(BaseDiffusion):
 
     def setup(self, *args, **kwargs):
-        self._model = diffusers.StableDiffusionPipeline.from_pretrained(
+        self.model = diffusers.StableDiffusionPipeline.from_pretrained(
             "CompVis/stable-diffusion-v1-4",
             **models.extras
         ).to(self.device)

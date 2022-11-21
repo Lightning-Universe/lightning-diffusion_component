@@ -131,6 +131,8 @@ class DreamBoothTuner:
 
         for step, batch in enumerate(train_dataloader):
 
+            print("step")
+
             if self.gradient_accumulation_steps > 1:
                 is_accumulating = step % self.gradient_accumulation_steps != 0
             else:
@@ -265,6 +267,7 @@ class DreamBoothTuner:
         return unet, optimizer, dtype
 
     def prepare_data(self, lite: LightningLite, model):
+        print("a")
         train_dataset = DreamBoothDataset(
             instance_data_root=self.user_images_data_dir,
             instance_prompt=self.prompt,
@@ -275,6 +278,7 @@ class DreamBoothTuner:
             center_crop=self.center_crop,
             length=self.max_steps,
         )
+        print("b")
 
         train_dataloader = torch.utils.data.DataLoader(
             train_dataset,
@@ -284,7 +288,13 @@ class DreamBoothTuner:
             num_workers=1,
         )
 
-        return lite.setup_dataloaders(train_dataloader)
+        print("c")
+
+        dataloaders = lite.setup_dataloaders(train_dataloader)
+
+        print("d")
+
+        return dataloaders
 
     def _download_images(self):
         """Download the images provided by the user"""
@@ -307,7 +317,7 @@ class DreamBoothTuner:
             else:
                 print(f"The image from {image_url} doesn't exist.")
 
-    def _generate_preservation_images(self, lite: LightningLite, model):
+    def _generate_preservation_images(self, lite: LightningLite, model: StableDiffusionPipeline):
 
         os.makedirs(self.preservation_images_data_dir, exist_ok=True)
 

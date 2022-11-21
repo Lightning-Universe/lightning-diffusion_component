@@ -117,9 +117,15 @@ class DreamBoothTuner:
         assert model
         lite = LightningLite(precision=16, strategy="deepspeed_stage_2_offload")
 
+        print("Setting up the Data...")
+
         self.setup(lite, model)
 
+        print("Preparing the Model...")
+
         unet, optimizer, dtype = self.prepare_model(lite, model)
+
+        print("Preparing the Dataloaders...")
 
         train_dataloader = self.prepare_data(lite, model)
 

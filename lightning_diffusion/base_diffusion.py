@@ -72,7 +72,7 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
             )
 
         self.load_balancer = LoadBalancer(
-            DiffusionServe(_trimmed_flow, cloud_compute=serve_cloud_compute),
+            DiffusionServe(_trimmed_flow, cloud_compute=serve_cloud_compute, start_with_flow=False),
             num_replicas=num_replicas,
         )
 

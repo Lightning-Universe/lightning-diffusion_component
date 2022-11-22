@@ -9,23 +9,18 @@ from lightning.app.frontend.frontend import Frontend
 
 class PythonWatcher(threading.Thread):
 
-    def __init__(self, component):
+    def __init__(self, work):
         super().__init__(daemon=True)
-        self.component = component
+        self.work = work
 
     def run(self):
         try:
-            self.component.should_reload = True
-
-            while self.component.should_reload:
-                sleep(1)
+            self.work.should_reload = True
 
             for _ in watch('.', watch_filter=PythonFilter(ignore_paths=[__file__])):
 
-                self.component.should_reload = True
-
-                while self.component.should_reload:
-                    sleep(1)
+                self.work.should_reload = False
+                self.work.should_reload = True
 
         except Exception as e:
             print(traceback.print_exc())
@@ -59,40 +54,21 @@ class VSCodeServer(LightningWork):
         self._thread.join(0)
 
 
-class VSCodeFrontend(Frontend):
-
-    def start_server(self, host: str, port: int, root_path: str = "") -> None:
-        self._process = subprocess.Popen(f"code-server --auth=none . --bind-addr={host}:{port}", shell=True)
-
-    def stop_server(self):
-        self._process.kill()
-
-
-class VSCodeFlow(LightningFlow):
-
-    def __init__(self):
-        super().__init__()
-
-    def configure_layout(self):
-        return VSCodeFrontend()
-
-
 class VSCode(LightningFlow):
 
     def __init__(self, entrypoint_file: str):
         super().__init__()
         self.entrypoint_file = entrypoint_file
         self.flow = None
-        self.vscode = VSCodeFlow()
+        self.vscode = VSCodeServer()
         self.should_reload = False
         self._thread = None
 
     def run(self):
-        if self._thread is None:
-            self._thread = PythonWatcher(self)
-            self._thread.start()
 
-        if self.should_reload:
+        self.vscode.run()
+
+        if self.vscode.should_reload:
 
             if self.flow:
                 for w in self.flow.works():
@@ -106,7 +82,7 @@ class VSCode(LightningFlow):
             except Exception:
                 print(traceback.print_exc())
 
-            self.should_reload = False
+            self.vscode.should_reload = False
 
         if self.flow:
             self.flow.run()

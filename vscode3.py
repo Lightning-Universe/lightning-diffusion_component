@@ -4,8 +4,8 @@ from lightning import LightningFlow, LightningWork, BuildConfig
 from lightning.app.utilities.load_app import load_app_from_file
 from watchfiles import watch, PythonFilter
 import traceback
+from lightning.app.utilities.app_helpers import _LightningAppRef
 from time import sleep
-from lightning.app.frontend.frontend import Frontend
 
 class PythonWatcher(threading.Thread):
 
@@ -35,7 +35,6 @@ class VSCodeBuildConfig(BuildConfig):
     def build_commands(self):
         return [
             "sudo apt update",
-            "sudo apt install python3.8-venv",
             "curl -fsSL https://code-server.dev/install.sh | sh",
         ]
 
@@ -45,37 +44,16 @@ class VSCodeServer(LightningWork):
         super().__init__(
             cloud_build_config=VSCodeBuildConfig(),
             parallel=True,
+            start_with_flow=False,
         )
         self.should_reload = False
-        self._thread = None
+        self._process = None
 
     def run(self):
-        self._thread = PythonWatcher(self)
-        self._thread.start()
-        # subprocess.call("mkdir ~/playground && cd ~/playground && python -m venv venv", shell=True)
-        subprocess.call(f"code-server --auth=none . --bind-addr={self.host}:{self.port}", shell=True)
+        self._process = subprocess.Popen(f"code-server --auth=none . --bind-addr={self.host}:{self.port}", shell=True)
 
     def on_exit(self):
-        self._thread.join(0)
-
-
-class VSCodeFrontend(Frontend):
-
-    def start_server(self, host: str, port: int, root_path: str = "") -> None:
-        self._process = subprocess.Popen(f"code-server --auth=none . --bind-addr={host}:{port}", shell=True)
-
-    def stop_server(self):
         self._process.kill()
-
-
-class VSCodeFlow(LightningFlow):
-
-    def __init__(self):
-        super().__init__()
-
-    def configure_layout(self):
-        return VSCodeFrontend()
-
 
 class VSCode(LightningFlow):
 
@@ -83,7 +61,7 @@ class VSCode(LightningFlow):
         super().__init__()
         self.entrypoint_file = entrypoint_file
         self.flow = None
-        self.vscode = VSCodeFlow()
+        self.vscode = VSCodeServer()
         self.should_reload = False
         self._thread = None
 
@@ -92,6 +70,8 @@ class VSCode(LightningFlow):
             self._thread = PythonWatcher(self)
             self._thread.start()
 
+        self.vscode.run()
+
         if self.should_reload:
 
             if self.flow:
@@ -99,7 +79,10 @@ class VSCode(LightningFlow):
                     w.stop()
 
             try:
+                # Loading another Lightning App Reference.
+                app = _LightningAppRef().get_current()
                 new_flow = load_app_from_file(self.entrypoint_file).root
+                _LightningAppRef._app_instance = app
                 new_flow = self.upgrade_fn(self.flow, new_flow)
                 del self.flow
                 self.flow = new_flow

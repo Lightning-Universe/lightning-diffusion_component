@@ -1,6 +1,9 @@
 # ! sudo apt update
 # ! curl -fsSL https://code-server.dev/install.sh | sh
-from lightning import LightningApp
+import lightning as L
 from vscode3 import VSCode
 
-app = LightningApp(VSCode("component.py"))
+app = L.LightningApp(
+    VSCode("dreambooth_component.py"),
+    flow_cloud_compute=L.CloudCompute("gpu-fast"),
+)

@@ -1,35 +1,10 @@
 import subprocess
-import threading
 from lightning import LightningFlow, LightningWork, BuildConfig
 from lightning.app.utilities.load_app import load_app_from_file
-from watchfiles import watch, PythonFilter
 import traceback
 from lightning.app.utilities.app_helpers import _LightningAppRef
-from time import sleep
-
-class PythonWatcher(threading.Thread):
-
-    def __init__(self, component):
-        super().__init__(daemon=True)
-        self.component = component
-
-    def run(self):
-        try:
-            self.component.should_reload = True
-
-            while self.component.should_reload:
-                sleep(1)
-
-            for _ in watch('.', watch_filter=PythonFilter(ignore_paths=[__file__])):
-
-                self.component.should_reload = True
-
-                while self.component.should_reload:
-                    sleep(1)
-
-        except Exception as e:
-            print(traceback.print_exc())
-
+from lightning.app.utilities.enum import CacheCallsKeys
+from lightning.app.utilities.exceptions import CacheMissException
 
 class VSCodeBuildConfig(BuildConfig):
     def build_commands(self):
@@ -66,9 +41,10 @@ class VSCode(LightningFlow):
         self._thread = None
 
     def run(self):
-        if self._thread is None:
-            self._thread = PythonWatcher(self)
-            self._thread.start()
+
+        # if self._thread is None:
+        #     self._thread = PythonWatcher(self)
+        #     self._thread.start()
 
         self.vscode.run()
 
@@ -76,7 +52,9 @@ class VSCode(LightningFlow):
 
             if self.flow:
                 for w in self.flow.works():
-                    w.stop()
+                    latest_hash = w._calls[CacheCallsKeys.LATEST_CALL_HASH]
+                    if latest_hash is not None:
+                        w.stop()
 
             try:
                 # Loading another Lightning App Reference.
@@ -91,8 +69,13 @@ class VSCode(LightningFlow):
 
             self.should_reload = False
 
-        if self.flow:
-            self.flow.run()
+        try:
+            if self.flow:
+                self.flow.run()
+        except CacheMissException as e:
+            raise e
+        except Exception:
+            print(traceback.print_exc())
 
     def configure_layout(self):
         tabs = [{"name": "vscode", "content": self.vscode}]
@@ -107,3 +90,9 @@ class VSCode(LightningFlow):
 
     def upgrade_fn(self, old_flow, new_flow):
         return new_flow
+
+    def reload(self):
+        self.should_reload = True
+
+    def configure_commands(self):
+        return [{"reload": self.reload}]

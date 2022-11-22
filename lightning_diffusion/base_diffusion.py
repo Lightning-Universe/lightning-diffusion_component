@@ -113,4 +113,4 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
             self.load_balancer.run()
 
     def configure_layout(self):
-        return {'name': 'API', 'content': self.load_balancer.url}
+        return [{'name': 'API', 'content': self.load_balancer.url}]

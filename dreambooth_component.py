@@ -1,3 +1,4 @@
+import lightning as L
 from lightning_diffusion import BaseDiffusion, DreamBoothTuner, models
 from diffusers import StableDiffusionPipeline
 from model_cloud.cloud_api import download_from_lightning_cloud

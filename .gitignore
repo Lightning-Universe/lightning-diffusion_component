@@ -7,7 +7,6 @@ run_configs/
 model_weights/
 pip-wheel-metadata/
 lightning_logs/
-.vscode/
 
 # Documentations
 docs/source-app/generated

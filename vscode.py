@@ -37,7 +37,7 @@ class VSCode(LightningFlow):
                 for w in self.flow.works():
                     latest_hash = w._calls[CacheCallsKeys.LATEST_CALL_HASH]
                     if latest_hash is not None:
-                        w.stop()
+                        w.delete()
 
             try:
                 # Loading another Lightning App Reference.

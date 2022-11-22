@@ -4,6 +4,6 @@ import lightning as L
 from vscode import VSCode
 
 app = L.LightningApp(
-    VSCode("component.py")
-    # flow_cloud_compute=L.CloudCompute("gpu-fast"),
+    VSCode("component.py"),
+    flow_cloud_compute=L.CloudCompute("gpu"),
 )

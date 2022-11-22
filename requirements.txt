@@ -3,7 +3,6 @@ jsonargparse[signatures]
 pyyaml==5.4.0
 protobuf<4.21.0
 lightning_hpo
-lightning
 Pillow>=2.9.0
 numpy>=1.9.2
 diffusers==0.7.2

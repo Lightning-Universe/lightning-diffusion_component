@@ -10,6 +10,8 @@ class ServeDreamBoothDiffusion(BaseDiffusion):
             **models.get_kwargs("CompVis/stable-diffusion-v1-4", self.weights_drive),
         ).to(self.device)
 
+
+
     def finetune(self):
         DreamBoothTuner(
             image_urls=[
@@ -25,7 +27,6 @@ class ServeDreamBoothDiffusion(BaseDiffusion):
     def predict(self, data):
         out = self.model(prompt=data.prompt)
         return {"image": self.serialize(out[0][0])}
-
 
 
 app = L.LightningApp(

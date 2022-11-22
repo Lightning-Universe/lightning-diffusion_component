@@ -1,13 +1,16 @@
-import lightning as L
 from lightning_diffusion import BaseDiffusion, DreamBoothTuner, models
 from diffusers import StableDiffusionPipeline
-
+from model_cloud.cloud_api import download_from_lightning_cloud
+import zipfile
 
 class ServeDreamBoothDiffusion(BaseDiffusion):
 
     def setup(self):
+        download_from_lightning_cloud("daniela/stable_diffusion", version="latest",output_dir="model") 
+        with zipfile.ZipFile("model/checkpoint.zip", 'r') as zip_ref:
+            zip_ref.extractall("")
         self._model = StableDiffusionPipeline.from_pretrained(
-            **models.get_kwargs("CompVis/stable-diffusion-v1-4", self.weights_drive),
+            **models.get_kwargs("model", self.weights_drive),
         ).to(self.device)
 
     def finetune(self):

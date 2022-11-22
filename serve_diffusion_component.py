@@ -1,6 +1,6 @@
 # !pip install lightning_diffusion@git+https://github.com/Lightning-AI/lightning-diffusion.git
 import lightning as L
-import torch, diffusers
+import diffusers
 from lightning_diffusion import BaseDiffusion, models
 
 

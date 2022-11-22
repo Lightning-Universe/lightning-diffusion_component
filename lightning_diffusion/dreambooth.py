@@ -1,6 +1,6 @@
 import lightning as L
 from lightning.lite import LightningLite
-from typing import List, Optional
+from typing import List, Optional, Union
 from lightning_diffusion.datasets import DreamBoothDataset, PromptDataset
 import os
 import torch
@@ -54,7 +54,7 @@ class DreamBoothTuner:
     learning_rate: float = 5e-6
     lr_scheduler = "constant"
     lr_warmup_steps: int = 0
-    precision: int = 16
+    precision: Union[int, str] = "bf16"
     seed: int = 42
     gradient_checkpointing: bool = True
     resolution: int = 512
@@ -115,7 +115,7 @@ class DreamBoothTuner:
 
     def run(self, model: Optional[StableDiffusionPipeline]):
         assert model
-        lite = LightningLite(precision=16, strategy="deepspeed_stage_2_offload")
+        lite = LightningLite(precision=16, strategy="ddp")
 
         print("Setting up the Data...")
 
@@ -129,7 +129,11 @@ class DreamBoothTuner:
 
         train_dataloader = self.prepare_data(lite, model)
 
+        print('A')
+
         for step, batch in enumerate(train_dataloader):
+
+            print("step")
 
             if self.gradient_accumulation_steps > 1:
                 is_accumulating = step % self.gradient_accumulation_steps != 0
@@ -188,6 +192,8 @@ class DreamBoothTuner:
             if lite.is_global_zero:
                 print(f"Step {step}/{self.max_steps}: {loss}")
 
+        del optimizer
+
         torch.distributed.destroy_process_group()
 
         if lite.is_global_zero:
@@ -239,10 +245,14 @@ class DreamBoothTuner:
             )
 
         # # Use 8-bit Adam for lower memory usage or to fine-tune the model in 16GB GPUs
-        optimizer_class = torch.optim.AdamW
+        try:
+            import bitsandbytes as bnb
+            optimizer_cls = bnb.optim.AdamW8bit
+        except ImportError:
+            optimizer_cls = torch.optim.AdamW
 
         params_to_optimize = model.unet.parameters()
-        optimizer = optimizer_class(
+        optimizer = optimizer_cls(
             params_to_optimize,
             lr=self.learning_rate,
         )
@@ -261,10 +271,12 @@ class DreamBoothTuner:
         model.text_encoder = model.text_encoder.to(device=lite.device, dtype=dtype)
 
         model.unet.train()
+        model.unet.to(dtype=torch.float32)
 
         return unet, optimizer, dtype
 
     def prepare_data(self, lite: LightningLite, model):
+        print("a")
         train_dataset = DreamBoothDataset(
             instance_data_root=self.user_images_data_dir,
             instance_prompt=self.prompt,
@@ -275,6 +287,7 @@ class DreamBoothTuner:
             center_crop=self.center_crop,
             length=self.max_steps,
         )
+        print("b")
 
         train_dataloader = torch.utils.data.DataLoader(
             train_dataset,
@@ -284,7 +297,13 @@ class DreamBoothTuner:
             num_workers=1,
         )
 
-        return lite.setup_dataloaders(train_dataloader)
+        print("c")
+
+        dataloaders = lite.setup_dataloaders(train_dataloader)
+
+        print("d")
+
+        return dataloaders
 
     def _download_images(self):
         """Download the images provided by the user"""
@@ -307,14 +326,14 @@ class DreamBoothTuner:
             else:
                 print(f"The image from {image_url} doesn't exist.")
 
-    def _generate_preservation_images(self, lite: LightningLite, model):
+    def _generate_preservation_images(self, lite: LightningLite, model: StableDiffusionPipeline):
 
         os.makedirs(self.preservation_images_data_dir, exist_ok=True)
 
         sample_dataset = PromptDataset(self.preservation_prompt, self.num_preservation_images)
         sample_dataloader = torch.utils.data.DataLoader(
             sample_dataset,
-            batch_size=2,
+            batch_size=4,
         )
 
         sample_dataloader = lite.setup_dataloaders(sample_dataloader)
@@ -344,19 +363,29 @@ class DreamBoothTuner:
     def evaluate_model(self, model):
         os.makedirs(self.validation_images_data_dir, exist_ok=True)
 
+        gc.collect()
+        with torch.no_grad():
+            torch.cuda.empty_cache()
+
         counter = 0 
 
-        model.vae = model.vae.to(torch.float32)
-        model.text_encoder = model.text_encoder.to(torch.float32)
         safety_checker = model.safety_checker
         model.safety_checker = None
+        model.vae = model.vae.to(torch.float32)
+        model.text_encoder = model.text_encoder.to(torch.float32)
+        model.unet = model.unet.to(torch.float32)
 
         with torch.inference_mode():
-            images = model(self.validation_prompt, num_images_per_prompt=self.num_images_per_prompt).images
+            for _ in range(self.num_images_per_prompt):
+                images = model(self.validation_prompt, num_images_per_prompt=1).images
 
-            for image in images:
-                path = os.path.join(self.validation_images_data_dir, f"{counter}.jpg")
-                image.save(path)
-                counter += 1
+                for image in images:
+                    path = os.path.join(self.validation_images_data_dir, f"{counter}.jpg")
+                    image.save(path)
+                    counter += 1
+
+        gc.collect()
+        with torch.no_grad():
+            torch.cuda.empty_cache()
 
         return safety_checker

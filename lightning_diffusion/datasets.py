@@ -58,6 +58,18 @@ class DreamBoothDataset(Dataset):
             ]
         )
 
+        self.instance_prompt_ids = self.tokenizer(
+            self.instance_prompt,
+            padding="do_not_pad",
+            truncation=True,
+            max_length=self.tokenizer.model_max_length).input_ids
+
+        self.class_prompt_ids = self.tokenizer(
+            self.class_prompt,
+            padding="do_not_pad",
+            truncation=True,
+            max_length=self.tokenizer.model_max_length).input_ids
+
     def __len__(self):
         return self._length
 
@@ -71,12 +83,7 @@ class DreamBoothDataset(Dataset):
 
         # transfor images
         example["instance_images"] = self.image_transforms(instance_image)
-        # tokenize text prompt
-        example["instance_prompt_ids"] = self.tokenizer(
-                                        self.instance_prompt,
-                                        padding="do_not_pad",
-                                        truncation=True,
-                                        max_length=self.tokenizer.model_max_length,).input_ids
+        example["instance_prompt_ids"] = self.instance_prompt_ids
 
         # handle prior examples
         if self.class_data_root:
@@ -87,13 +94,7 @@ class DreamBoothDataset(Dataset):
                 class_image = class_image.convert("RGB")
             # transform
             example["class_images"] = self.image_transforms(class_image)
-            # tokenize description
-            example["class_prompt_ids"] = self.tokenizer(
-                self.class_prompt,
-                padding="do_not_pad",
-                truncation=True,
-                max_length=self.tokenizer.model_max_length,
-            ).input_ids
+            example["class_prompt_ids"] = self.class_prompt_ids
 
         return example
 

@@ -9,8 +9,7 @@ class ServeDreamBoothDiffusion(BaseDiffusion):
     def setup(self):
         download_from_lightning_cloud("daniela/stable_diffusion", version="latest",output_dir="model") 
         self._model = StableDiffusionPipeline.from_pretrained(
-            **models.get_kwargs("model", self.weights_drive),
-            revision= "fp16",
+            **models.get_kwargs("model", self.weights_drive)
         ).to(self.device)
 
     def finetune(self):

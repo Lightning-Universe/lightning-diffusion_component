@@ -9,9 +9,10 @@ class ServeDreamBoothDiffusion(BaseDiffusion):
     def setup(self):
         download_from_lightning_cloud("daniela/stable_diffusion", version="latest",output_dir="model") 
         with zipfile.ZipFile("model/checkpoint.zip", 'r') as zip_ref:
-            zip_ref.extractall("")
+            zip_ref.extractall()
         self._model = StableDiffusionPipeline.from_pretrained(
             **models.get_kwargs("model", self.weights_drive),
+            revision= "fp16",
         ).to(self.device)
 
     def finetune(self):

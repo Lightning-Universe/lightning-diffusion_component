@@ -1,5 +1,3 @@
-import inspect
-import json
 import logging
 import os
 import shutil
@@ -7,12 +5,8 @@ import tarfile
 from pathlib import PurePath
 
 import requests
-import torch
-from requests.auth import HTTPBasicAuth
 from tqdm import tqdm
-from tqdm.utils import CallbackIOWrapper
 
-from .utils import LIGHTNING_CLOUD_URL
 
 logging.basicConfig(level=logging.INFO)
 

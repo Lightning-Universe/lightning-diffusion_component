@@ -8,7 +8,7 @@ from .save import (
     _download_and_extract_data_to,
     get_linked_output_dir,
 )
-from .utils import get_model_data, LIGHTNING_CLOUD_URL, LIGHTNING_STORAGE_FILE, split_name, stage
+from .utils import get_model_data, LIGHTNING_CLOUD_URL, split_name, stage
 from .utils import LIGHTNING_STORAGE_DIR
 
 

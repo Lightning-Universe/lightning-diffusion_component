@@ -1,4 +1,4 @@
-# Lightning Diffusion
+# Lightning Diffusion Component
 
 Lightning Diffusion provides components to finetune and serve diffusion model on [lightning.ai](https://lightning.ai/). For example, save this code snippet as `app.py` and run the below commands
 

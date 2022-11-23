@@ -6,7 +6,7 @@ from diffusers import StableDiffusionPipeline
 class ServeDreamBoothDiffusion(BaseDiffusion):
 
     def setup(self):
-        self._model = StableDiffusionPipeline.from_pretrained(
+        self.model = StableDiffusionPipeline.from_pretrained(
             **models.get_kwargs("CompVis/stable-diffusion-v1-4", self.weights_drive),
         ).to(self.device)
 

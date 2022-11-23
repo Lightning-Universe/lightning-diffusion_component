@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from typing import List
+import zipfile
 
 import requests
 from .save import (
@@ -67,6 +67,9 @@ def download_from_lightning_cloud(
 
     logging.info(f"Downloading the model data for {name} to {output_dir} folder.")
     _download_and_extract_data_to(output_dir, download_url, progress_bar)
+    with zipfile.ZipFile("{output_dir}/checkpoint.zip", 'r') as zip_ref:
+            zip_ref.extractall()
+
 
     if linked_output_dir:
         logging.info(f"Linking the downloaded folder from {output_dir} to {linked_output_dir} folder.")
@@ -77,3 +80,4 @@ def download_from_lightning_cloud(
                 os.rmdir(linked_output_dir)
 
         os.symlink(output_dir, linked_output_dir)
+        

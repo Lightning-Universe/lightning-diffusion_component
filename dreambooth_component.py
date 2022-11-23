@@ -1,15 +1,13 @@
 import lightning as L
 from lightning_diffusion import BaseDiffusion, DreamBoothTuner, models
 from diffusers import StableDiffusionPipeline
-from model_cloud.cloud_api import download_from_lightning_cloud
-import zipfile
+from lightning_diffusion.model_cloud.cloud_api import download_from_lightning_cloud
+
 
 class ServeDreamBoothDiffusion(BaseDiffusion):
 
     def setup(self):
         download_from_lightning_cloud("daniela/stable_diffusion", version="latest",output_dir="model") 
-        with zipfile.ZipFile("model/checkpoint.zip", 'r') as zip_ref:
-            zip_ref.extractall()
         self._model = StableDiffusionPipeline.from_pretrained(
             **models.get_kwargs("model", self.weights_drive),
             revision= "fp16",

@@ -2,14 +2,13 @@
 import diffusers
 import lightning as L
 
-from lightning_diffusion import BaseDiffusion, models
+from lightning_diffusion import BaseDiffusion, models, download_from_lightning_cloud
 
 
 class ServeDiffusion(BaseDiffusion):
     def setup(self, *args, **kwargs):
-        self.model = diffusers.StableDiffusionPipeline.from_pretrained(
-            "CompVis/stable-diffusion-v1-4", **models.extras
-        ).to(self.device)
+        download_from_lightning_cloud("daniela/stable_diffusion", version="latest", output_dir="model")
+        self.model = diffusers.StableDiffusionPipeline.from_pretrained("model").to(self.device)
 
     def predict(self, data):
         out = self.model(prompt=data.prompt, num_inference_steps=23)

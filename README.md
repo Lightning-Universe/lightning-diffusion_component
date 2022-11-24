@@ -6,16 +6,16 @@ Lightning Diffusion provides components to finetune and serve diffusion model on
 
 ```python
 # !pip install lightning_diffusion@git+https://github.com/Lightning-AI/lightning-diffusion.git
-import lightning as L
 import diffusers
-from lightning_diffusion import BaseDiffusion, models
+import lightning as L
+
+from lightning_diffusion import BaseDiffusion, models, download_from_lightning_cloud
 
 
 class ServeDiffusion(BaseDiffusion):
     def setup(self, *args, **kwargs):
-        self.model = diffusers.StableDiffusionPipeline.from_pretrained(
-            "CompVis/stable-diffusion-v1-4", **models.extras
-        ).to(self.device)
+        download_from_lightning_cloud("daniela/stable_diffusion", version="latest", output_dir="model")
+        self.model = diffusers.StableDiffusionPipeline.from_pretrained("model").to(self.device)
 
     def predict(self, data):
         out = self.model(prompt=data.prompt, num_inference_steps=23)
@@ -31,14 +31,19 @@ Use the DreamBooth fine-tuning methodology from the paper \`Fine Tuning Text-to-
 
 ```python
 import lightning as L
-from lightning_diffusion import BaseDiffusion, DreamBoothTuner, models
 from diffusers import StableDiffusionPipeline
+
+from lightning_diffusion import BaseDiffusion, DreamBoothTuner, models
+from lightning_diffusion.model_cloud import download_from_lightning_cloud
 
 
 class ServeDreamBoothDiffusion(BaseDiffusion):
     def setup(self):
+        download_from_lightning_cloud(
+            "daniela/stable_diffusion", version="latest", output_dir="model"
+        )
         self.model = StableDiffusionPipeline.from_pretrained(
-            **models.get_kwargs("CompVis/stable-diffusion-v1-4", self.weights_drive),
+            **models.get_kwargs("model", self.weights_drive)
         ).to(self.device)
 
     def finetune(self):

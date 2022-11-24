@@ -7,8 +7,8 @@ from lightning_diffusion.model_cloud import download_from_lightning_cloud
 class ServeDreamBoothDiffusion(BaseDiffusion):
 
     def setup(self):
-        download_from_lightning_cloud("daniela/stable_diffusion", version="latest",output_dir="model") 
-        self._model = StableDiffusionPipeline.from_pretrained(
+        download_from_lightning_cloud("daniela/stable_diffusion", version="latest", output_dir="model")
+        self.model = StableDiffusionPipeline.from_pretrained(
             **models.get_kwargs("model", self.weights_drive)
         ).to(self.device)
 

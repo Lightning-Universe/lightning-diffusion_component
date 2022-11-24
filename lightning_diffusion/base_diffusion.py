@@ -87,6 +87,10 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
         assert self._model
         return self._model
 
+    @model.setter
+    def model(self, model) -> None:
+        self._model = model
+
     @property
     def device(self):
         import torch

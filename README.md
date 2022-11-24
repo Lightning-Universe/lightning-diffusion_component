@@ -66,7 +66,7 @@ app = L.LightningApp(
 )
 ```
 
-To customize our own DreamBooth diffusion model, you need provide your own images URL and a prompt.
+To customize the Diffusion model to your own need, simply provide your own images URL(s) and an associated prompt.
 The prompt needs to be in the following format with the `[...]` included.
 Reference Format: `A photo of [NOUN] [DESCRIPTIVE CLASS] [DESCRIPTION FOR THE NEW GENERATED IMAGES]`.
 

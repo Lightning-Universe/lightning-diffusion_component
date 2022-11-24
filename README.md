@@ -67,7 +67,9 @@ app = L.LightningApp(
 ```
 
 To customize the Diffusion model to your own need, simply provide your own images URL(s) and an associated prompt.
+
 The prompt needs to be in the following format with the `[...]` included.
+
 Reference Format: `A photo of [NOUN] [DESCRIPTIVE CLASS] [DESCRIPTION FOR THE NEW GENERATED IMAGES]`.
 
 Inspired from [here](https://github.com/ShivamShrirao/diffusers/blob/main/examples/dreambooth/train_dreambooth.py) and [here](https://colab.research.google.com/drive/1SyjkeuPrX7kd_xTBKhcvBGEC8G_ml9RU#scrollTo=1lKGmcIyJbCu).

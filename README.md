@@ -12,9 +12,7 @@ Lightning Diffusion provides components to finetune and serve diffusion model on
 # !pip install lightning_diffusion@git+https://github.com/Lightning-AI/lightning-diffusion.git
 import diffusers
 import lightning as L
-
-from lightning_diffusion import BaseDiffusion, models, download_from_lightning_cloud
-
+from lightning_diffusion import BaseDiffusion, download_from_lightning_cloud
 
 class ServeDiffusion(BaseDiffusion):
     def setup(self, *args, **kwargs):
@@ -38,10 +36,8 @@ Use the DreamBooth fine-tuning methodology from the paper \`Fine Tuning Text-to-
 ```python
 import lightning as L
 from diffusers import StableDiffusionPipeline
-
 from lightning_diffusion import BaseDiffusion, DreamBoothTuner, models
 from lightning_diffusion.model_cloud import download_from_lightning_cloud
-
 
 class ServeDreamBoothDiffusion(BaseDiffusion):
     def setup(self):
@@ -68,7 +64,6 @@ class ServeDreamBoothDiffusion(BaseDiffusion):
         out = self.model(prompt=data.prompt)
         return {"image": self.serialize(out[0][0])}
 
-
 app = L.LightningApp(
     ServeDreamBoothDiffusion(
         serve_cloud_compute=L.CloudCompute("gpu", disk_size=80),
@@ -77,15 +72,10 @@ app = L.LightningApp(
 )
 ```
 
-<<<<<<< HEAD
-To customize our own DreamBooth diffusion model, you need provide your own images URL and a prompt.
-The prompt needs to be in the following format with the `[...]` included.
-=======
 To customize the Diffusion model to your own need, simply provide your own images URL(s) and an associated prompt.
 
 The prompt needs to be in the following format with the `[...]` included.
 
->>>>>>> main
 Reference Format: `A photo of [NOUN] [DESCRIPTIVE CLASS] [DESCRIPTION FOR THE NEW GENERATED IMAGES]`.
 
 Inspired from [here](https://github.com/ShivamShrirao/diffusers/blob/main/examples/dreambooth/train_dreambooth.py) and [here](https://colab.research.google.com/drive/1SyjkeuPrX7kd_xTBKhcvBGEC8G_ml9RU#scrollTo=1lKGmcIyJbCu).

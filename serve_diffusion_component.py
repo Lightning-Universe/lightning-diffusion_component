@@ -1,3 +1,4 @@
+# ! pip install torch diffusers git+https://github.com/Lightning-AI/lightning-diffusion-component.git
 import diffusers
 import lightning as L
 from lightning_diffusion import BaseDiffusion, download_from_lightning_cloud

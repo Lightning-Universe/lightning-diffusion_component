@@ -9,6 +9,7 @@ To get started, save this code snippet as `component.py` and run the below at th
 ### Serve ANY Diffusion Models
 
 ```python
+# ! pip install torch diffusers git+https://github.com/Lightning-AI/lightning-diffusion-component.git
 import diffusers
 import lightning as L
 from lightning_diffusion import BaseDiffusion, download_from_lightning_cloud
@@ -34,6 +35,7 @@ Run the component for free directly [there](https://lightning.ai/component/UJ7st
 Use the DreamBooth fine-tuning methodology from the paper \`Fine Tuning Text-to-Image Diffusion Models for Subject-Driven Generation\](https://arxiv.org/abs/2208.12242) as follows:
 
 ```python
+# ! pip install torch diffusers git+https://github.com/Lightning-AI/lightning-diffusion-component.git
 import lightning as L
 from diffusers import StableDiffusionPipeline
 from lightning_diffusion import BaseDiffusion, DreamBoothTuner, models, download_from_lightning_cloud

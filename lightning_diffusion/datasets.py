@@ -42,6 +42,12 @@ class DreamBoothDataset(Dataset):
             self.num_class_images = len(self.class_images_path)
             self._length = max(self.num_class_images, self.num_instance_images)
             self.class_prompt = class_prompt
+            self.class_prompt_ids = self.tokenizer(
+                self.class_prompt,
+                padding="do_not_pad",
+                truncation=True,
+                max_length=self.tokenizer.model_max_length,
+            ).input_ids
         else:
             self.class_data_root = None
 
@@ -62,10 +68,18 @@ class DreamBoothDataset(Dataset):
             ]
         )
 
+        self.instance_prompt_ids = self.tokenizer(
+            self.instance_prompt,
+            padding="do_not_pad",
+            truncation=True,
+            max_length=self.tokenizer.model_max_length,
+        ).input_ids
+
     def __len__(self):
         return self._length
 
     def __getitem__(self, index):
+        print("a")
         example = {}
         # load exaples of my concept
         instance_image = Image.open(
@@ -75,15 +89,12 @@ class DreamBoothDataset(Dataset):
         if not instance_image.mode == "RGB":
             instance_image = instance_image.convert("RGB")
 
+        print("b")
+
         # transfor images
         example["instance_images"] = self.image_transforms(instance_image)
         # tokenize text prompt
-        example["instance_prompt_ids"] = self.tokenizer(
-            self.instance_prompt,
-            padding="do_not_pad",
-            truncation=True,
-            max_length=self.tokenizer.model_max_length,
-        ).input_ids
+        example["instance_prompt_ids"] = self.instance_prompt_ids
 
         # handle prior examples
         if self.class_data_root:
@@ -97,12 +108,9 @@ class DreamBoothDataset(Dataset):
             # transform
             example["class_images"] = self.image_transforms(class_image)
             # tokenize description
-            example["class_prompt_ids"] = self.tokenizer(
-                self.class_prompt,
-                padding="do_not_pad",
-                truncation=True,
-                max_length=self.tokenizer.model_max_length,
-            ).input_ids
+            example["class_prompt_ids"] = self.class_prompt_ids
+
+        print("c")
 
         return example
 

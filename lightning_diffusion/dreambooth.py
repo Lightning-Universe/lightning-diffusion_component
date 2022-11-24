@@ -1,17 +1,19 @@
-import lightning as L
-from lightning.lite import LightningLite
-from typing import List, Optional
-from lightning_diffusion.datasets import DreamBoothDataset, PromptDataset
-import os
-import torch
-from diffusers import StableDiffusionPipeline
-import requests
 import gc
+import os
 import re
-import torch.nn.functional as F
-from functools import partial
 from dataclasses import dataclass
+from functools import partial
+from typing import List, Optional
+
+import lightning as L
+import requests
+import torch
+import torch.nn.functional as F
+from diffusers import StableDiffusionPipeline
 from lightning.app.storage import Drive
+from lightning.lite import LightningLite
+
+from lightning_diffusion.datasets import DreamBoothDataset, PromptDataset
 
 
 def collate_fn(examples, tokenizer, preservation_prompt):
@@ -94,8 +96,10 @@ class DreamBoothTuner:
 
     def __post_init__(self):
         prompt = re.findall(r"\[([^]]*)\]", self.prompt)
-        if len(prompt)!=3:
-            raise Exception("Your validation form must have the form: a photo of a [personal name] [class] [validation/complement]")
+        if len(prompt) != 3:
+            raise Exception(
+                "Your validation form must have the form: a photo of a [personal name] [class] [validation/complement]"
+            )
         else:
             self.prompt = f"a photo of a {prompt[0]} {prompt[1]}"
             self.preservation_prompt = f"a photo of a {prompt[1]}"
@@ -103,15 +107,15 @@ class DreamBoothTuner:
 
     @property
     def user_images_data_dir(self) -> str:
-        return os.path.join(os.getcwd(), "data", 'user_images')
+        return os.path.join(os.getcwd(), "data", "user_images")
 
     @property
     def preservation_images_data_dir(self) -> str:
-        return os.path.join(os.getcwd(), "data", 'preservation_images')
+        return os.path.join(os.getcwd(), "data", "preservation_images")
 
     @property
     def validation_images_data_dir(self) -> str:
-        return os.path.join(os.getcwd(), "data", 'validation_images')
+        return os.path.join(os.getcwd(), "data", "validation_images")
 
     def run(self, model: Optional[StableDiffusionPipeline]):
         assert model
@@ -140,7 +144,9 @@ class DreamBoothTuner:
 
                 with torch.no_grad():
                     # Convert images to latent space
-                    latents = model.vae.encode(batch["pixel_values"].to(lite.device, dtype=dtype)).latent_dist.sample()
+                    latents = model.vae.encode(
+                        batch["pixel_values"].to(lite.device, dtype=dtype)
+                    ).latent_dist.sample()
                     latents = latents * 0.18215
 
                 # Sample noise that we'll add to the latents
@@ -148,7 +154,12 @@ class DreamBoothTuner:
                 bsz = latents.shape[0]
 
                 # Sample a random timestep for each image
-                timesteps = torch.randint(0, model.scheduler.config.num_train_timesteps, (bsz,), device=lite.device).long()
+                timesteps = torch.randint(
+                    0,
+                    model.scheduler.config.num_train_timesteps,
+                    (bsz,),
+                    device=lite.device,
+                ).long()
 
                 # Add noise to the latents according to the noise magnitude at each timestep
                 # (this is the forward diffusion process)
@@ -156,10 +167,14 @@ class DreamBoothTuner:
 
                 with torch.no_grad():
                     # Get the text embedding for conditioning
-                    encoder_hidden_states = model.text_encoder(batch["input_ids"].to(lite.device))[0]
+                    encoder_hidden_states = model.text_encoder(
+                        batch["input_ids"].to(lite.device)
+                    )[0]
 
                 # Predict the noise residual
-                noise_pred = model.unet(noisy_latents, timesteps, encoder_hidden_states).sample
+                noise_pred = model.unet(
+                    noisy_latents, timesteps, encoder_hidden_states
+                ).sample
 
                 if self.preservation_prompt:
                     # Chunk the noise and noise_pred into two parts and compute the loss on each part separately.
@@ -167,15 +182,23 @@ class DreamBoothTuner:
                     noise, noise_prior = torch.chunk(noise, 2, dim=0)
 
                     # Compute instance loss
-                    loss = F.mse_loss(noise_pred.float(), noise.float(), reduction="none").mean([1, 2, 3]).mean()
+                    loss = (
+                        F.mse_loss(noise_pred.float(), noise.float(), reduction="none")
+                        .mean([1, 2, 3])
+                        .mean()
+                    )
 
                     # Compute prior loss
-                    prior_loss = F.mse_loss(noise_pred_prior.float(), noise_prior.float(), reduction="mean")
+                    prior_loss = F.mse_loss(
+                        noise_pred_prior.float(), noise_prior.float(), reduction="mean"
+                    )
 
                     # Add the prior loss to the instance loss.
                     loss = loss + self.prior_loss_weight * prior_loss
                 else:
-                    loss = F.mse_loss(noise_pred.float(), noise.float(), reduction="mean")
+                    loss = F.mse_loss(
+                        noise_pred.float(), noise.float(), reduction="mean"
+                    )
 
                 lite.backward(loss)
 
@@ -235,7 +258,10 @@ class DreamBoothTuner:
 
         if self.scale_lr:
             self.learning_rate = (
-                self.learning_rate * self.gradient_accumulation_steps * self.train_batch_size * world_size
+                self.learning_rate
+                * self.gradient_accumulation_steps
+                * self.train_batch_size
+                * world_size
             )
 
         # # Use 8-bit Adam for lower memory usage or to fine-tune the model in 16GB GPUs
@@ -249,7 +275,9 @@ class DreamBoothTuner:
 
         unet = model.unet
 
-        model.unet, optimizer = lite.setup(unet, optimizer)  # Scale your model / optimizers
+        model.unet, optimizer = lite.setup(
+            unet, optimizer
+        )  # Scale your model / optimizers
 
         dtype = torch.float32
         if self.precision == 16:
@@ -268,7 +296,9 @@ class DreamBoothTuner:
         train_dataset = DreamBoothDataset(
             instance_data_root=self.user_images_data_dir,
             instance_prompt=self.prompt,
-            class_data_root=self.preservation_images_data_dir if self.preservation_prompt else None,
+            class_data_root=self.preservation_images_data_dir
+            if self.preservation_prompt
+            else None,
             class_prompt=self.preservation_prompt,
             tokenizer=model.tokenizer,
             size=self.resolution,
@@ -280,14 +310,18 @@ class DreamBoothTuner:
             train_dataset,
             batch_size=self.train_batch_size,
             shuffle=True,
-            collate_fn=partial(collate_fn, tokenizer=model.tokenizer, preservation_prompt=self.preservation_prompt),
+            collate_fn=partial(
+                collate_fn,
+                tokenizer=model.tokenizer,
+                preservation_prompt=self.preservation_prompt,
+            ),
             num_workers=1,
         )
 
         return lite.setup_dataloaders(train_dataloader)
 
     def _download_images(self):
-        """Download the images provided by the user"""
+        """Download the images provided by the user."""
 
         os.makedirs(self.user_images_data_dir, exist_ok=True)
 
@@ -301,7 +335,7 @@ class DreamBoothTuner:
 
                 path = os.path.join(self.user_images_data_dir, f"{idx + L}.jpg")
 
-                with open(path, 'wb') as f:
+                with open(path, "wb") as f:
                     for chunk in r.iter_content(1024):
                         f.write(chunk)
             else:
@@ -311,7 +345,9 @@ class DreamBoothTuner:
 
         os.makedirs(self.preservation_images_data_dir, exist_ok=True)
 
-        sample_dataset = PromptDataset(self.preservation_prompt, self.num_preservation_images)
+        sample_dataset = PromptDataset(
+            self.preservation_prompt, self.num_preservation_images
+        )
         sample_dataloader = torch.utils.data.DataLoader(
             sample_dataset,
             batch_size=2,
@@ -333,7 +369,9 @@ class DreamBoothTuner:
                 images = model(example["prompt"]).images
 
             for image in images:
-                path = os.path.join(self.preservation_images_data_dir, f"{counter + L}.jpg")
+                path = os.path.join(
+                    self.preservation_images_data_dir, f"{counter + L}.jpg"
+                )
                 image.save(path)
                 counter += 1
 
@@ -344,7 +382,7 @@ class DreamBoothTuner:
     def evaluate_model(self, model):
         os.makedirs(self.validation_images_data_dir, exist_ok=True)
 
-        counter = 0 
+        counter = 0
 
         model.vae = model.vae.to(torch.float32)
         model.text_encoder = model.text_encoder.to(torch.float32)
@@ -352,7 +390,9 @@ class DreamBoothTuner:
         model.safety_checker = None
 
         with torch.inference_mode():
-            images = model(self.validation_prompt, num_images_per_prompt=self.num_images_per_prompt).images
+            images = model(
+                self.validation_prompt, num_images_per_prompt=self.num_images_per_prompt
+            ).images
 
             for image in images:
                 path = os.path.join(self.validation_images_data_dir, f"{counter}.jpg")

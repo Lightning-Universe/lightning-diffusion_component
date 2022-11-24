@@ -1,22 +1,26 @@
 import lightning as L
-from lightning_diffusion import BaseDiffusion, DreamBoothTuner, models
 from diffusers import StableDiffusionPipeline
+
+from lightning_diffusion import BaseDiffusion, DreamBoothTuner, models
+from lightning_diffusion.model_cloud import download_from_lightning_cloud
 
 
 class ServeDreamBoothDiffusion(BaseDiffusion):
-
     def setup(self):
+        download_from_lightning_cloud(
+            "daniela/stable_diffusion", version="latest", output_dir="model"
+        )
         self.model = StableDiffusionPipeline.from_pretrained(
-            **models.get_kwargs("CompVis/stable-diffusion-v1-4", self.weights_drive),
+            **models.get_kwargs("model", self.weights_drive)
         ).to(self.device)
 
     def finetune(self):
         DreamBoothTuner(
             image_urls=[
-                "https://huggingface.co/datasets/valhalla/images/resolve/main/2.jpeg",
-                "https://huggingface.co/datasets/valhalla/images/resolve/main/3.jpeg",
-                "https://huggingface.co/datasets/valhalla/images/resolve/main/5.jpeg",
-                "https://huggingface.co/datasets/valhalla/images/resolve/main/6.jpeg",
+                "https://lightning-example-public.s3.amazonaws.com/2.jpeg",
+                "https://lightning-example-public.s3.amazonaws.com/3.jpeg",
+                "https://lightning-example-public.s3.amazonaws.com/5.jpeg",
+                "https://lightning-example-public.s3.amazonaws.com/6.jpeg",
                 ## You can change or add additional images here
             ],
             prompt="a photo of [sks] [cat clay toy] [riding a bicycle]",
@@ -25,7 +29,6 @@ class ServeDreamBoothDiffusion(BaseDiffusion):
     def predict(self, data):
         out = self.model(prompt=data.prompt)
         return {"image": self.serialize(out[0][0])}
-
 
 
 app = L.LightningApp(

@@ -1,5 +1,5 @@
-from PIL import Image
 import numpy
+from PIL import Image
 
 from lightning_diffusion.safety_checker import DefaultSafetyFilter
 

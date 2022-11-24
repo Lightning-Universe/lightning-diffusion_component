@@ -1,7 +1,7 @@
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
-from lightning.app.components.serve import PythonServer
 from lightning.app import LightningFlow
+from lightning.app.components.serve import PythonServer
 from pydantic import BaseModel
 
 
@@ -45,4 +45,3 @@ class DiffusionServe(PythonServer):
 
     def predict(self, prompt: str):
         return self._parent_flow.predict(prompt)
-

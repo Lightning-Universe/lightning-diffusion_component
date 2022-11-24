@@ -3,7 +3,6 @@ from lightning.app.components import LiteMultiNode
 
 
 class FlowLambdaWork(L.LightningWork):
-
     def __init__(self, *args, flow, **kwargs):
         super().__init__(*args, **kwargs)
         self._flow = flow
@@ -14,11 +13,10 @@ class FlowLambdaWork(L.LightningWork):
 
 
 class Finetuner(LiteMultiNode):
-
     def __init__(
         self,
         *args,
-        cloud_compute = L.CloudCompute("gpu-fast"),
+        cloud_compute=L.CloudCompute("gpu-fast"),
         num_nodes: int = 1,
         **kwargs
     ):

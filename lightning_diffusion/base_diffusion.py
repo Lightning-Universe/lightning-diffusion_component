@@ -49,7 +49,7 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
     def __init__(
         self,
         finetune_cloud_compute: Optional[L.CloudCompute] = None,
-        serve_cloud_compute: Optional[L.CloudCompute] = None,
+        serve_cloud_compute: Optional[L.CloudCompute] = L.CloudCompute("gpu"),
         num_replicas=1,
     ):
         super().__init__()

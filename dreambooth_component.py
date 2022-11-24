@@ -4,7 +4,6 @@ from diffusers import StableDiffusionPipeline
 from lightning_diffusion import BaseDiffusion, DreamBoothTuner, models
 from lightning_diffusion.model_cloud import download_from_lightning_cloud
 
-
 class ServeDreamBoothDiffusion(BaseDiffusion):
     def setup(self):
         download_from_lightning_cloud(
@@ -30,10 +29,5 @@ class ServeDreamBoothDiffusion(BaseDiffusion):
         out = self.model(prompt=data.prompt)
         return {"image": self.serialize(out[0][0])}
 
-
-app = L.LightningApp(
-    ServeDreamBoothDiffusion(
-        serve_cloud_compute=L.CloudCompute("gpu", disk_size=80),
-        finetune_cloud_compute=L.CloudCompute("gpu-fast", disk_size=80),
-    )
-)
+component = ServeDreamBoothDiffusion(finetune_cloud_compute=L.CloudCompute("gpu-fast", disk_size=80))
+app = L.LightningApp(component)

@@ -11,6 +11,6 @@ deepspeed
 ftfy
 lightning-api-access
 clip@git+https://github.com/openai/CLIP.git
-lightning==1.8.3
+lightning==1.8.3.post0
 redis
 s3fs

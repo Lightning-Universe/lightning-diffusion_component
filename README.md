@@ -25,6 +25,8 @@ class ServeDiffusion(BaseDiffusion):
 app = L.LightningApp(ServeDiffusion())
 ```
 
+Run the component for free directly [there](https://lightning.ai/component/UJ7stJI225-Serve%20Dreambooth%20Diffusion).
+
 ### Serve ANY fine-tuned Diffusion Models
 
 Use the DreamBooth fine-tuning methodology from the paper \`Fine Tuning Text-to-Image Diffusion Models for Subject-Driven Generation\](https://arxiv.org/abs/2208.12242) as follows:

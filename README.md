@@ -60,8 +60,7 @@ class ServeDreamBoothDiffusion(BaseDiffusion):
         out = self.model(prompt=data.prompt)
         return {"image": self.serialize(out[0][0])}
 
-component = ServeDreamBoothDiffusion(finetune_cloud_compute=L.CloudCompute("gpu-fast", disk_size=80))
-app = L.LightningApp(component)
+app = L.LightningApp(ServeDreamBoothDiffusion())
 ```
 
 To customize the Diffusion model to your own need, simply provide your own images URL(s) and an associated prompt.

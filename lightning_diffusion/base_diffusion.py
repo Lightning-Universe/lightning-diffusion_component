@@ -48,7 +48,7 @@ class LoadBalancer(L.LightningFlow):
 class BaseDiffusion(L.LightningFlow, abc.ABC):
     def __init__(
         self,
-        finetune_cloud_compute: Optional[L.CloudCompute] = None,
+        finetune_cloud_compute: Optional[L.CloudCompute] = L.CloudCompute("gpu-fast"),
         serve_cloud_compute: Optional[L.CloudCompute] = L.CloudCompute("gpu"),
         num_replicas=1,
     ):

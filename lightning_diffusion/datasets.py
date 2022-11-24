@@ -79,7 +79,6 @@ class DreamBoothDataset(Dataset):
         return self._length
 
     def __getitem__(self, index):
-        print("a")
         example = {}
         # load exaples of my concept
         instance_image = Image.open(
@@ -88,8 +87,6 @@ class DreamBoothDataset(Dataset):
 
         if not instance_image.mode == "RGB":
             instance_image = instance_image.convert("RGB")
-
-        print("b")
 
         # transfor images
         example["instance_images"] = self.image_transforms(instance_image)
@@ -109,8 +106,6 @@ class DreamBoothDataset(Dataset):
             example["class_images"] = self.image_transforms(class_image)
             # tokenize description
             example["class_prompt_ids"] = self.class_prompt_ids
-
-        print("c")
 
         return example
 

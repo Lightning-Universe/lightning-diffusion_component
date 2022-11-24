@@ -21,6 +21,7 @@ class Lite(LightningLite):
     def run(self):
         pass
 
+
 def collate_fn(examples, tokenizer, preservation_prompt):
     input_ids = [example["instance_prompt_ids"] for example in examples]
     pixel_values = [example["instance_images"] for example in examples]
@@ -125,6 +126,7 @@ class DreamBoothTuner:
     def run(self, model: Optional[StableDiffusionPipeline]):
         assert model
         lite = Lite(precision=16, strategy="deepspeed_stage_2_offload")
+        lite._strategy.setup_environment()
 
         print("Setting up the Data...")
 

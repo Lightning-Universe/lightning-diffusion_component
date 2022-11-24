@@ -1,4 +1,4 @@
-# ! pip install torch diffusers git+https://github.com/Lightning-AI/lightning-diffusion-component.git
+# ! pip install torch diffusers lightning==1.8.3.post0 git+https://github.com/Lightning-AI/lightning-diffusion-component.git
 import lightning as L
 from diffusers import StableDiffusionPipeline
 from lightning_diffusion import BaseDiffusion, DreamBoothTuner, models, download_from_lightning_cloud

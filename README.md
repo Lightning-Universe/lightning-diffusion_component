@@ -44,10 +44,10 @@ class ServeDreamBoothDiffusion(BaseDiffusion):
     def finetune(self):
         DreamBoothTuner(
             image_urls=[
-                "https://huggingface.co/datasets/valhalla/images/resolve/main/2.jpeg",
-                "https://huggingface.co/datasets/valhalla/images/resolve/main/3.jpeg",
-                "https://huggingface.co/datasets/valhalla/images/resolve/main/5.jpeg",
-                "https://huggingface.co/datasets/valhalla/images/resolve/main/6.jpeg",
+                "https://lightning-example-public.s3.amazonaws.com/2.jpeg",
+                "https://lightning-example-public.s3.amazonaws.com/3.jpeg",
+                "https://lightning-example-public.s3.amazonaws.com/5.jpeg",
+                "https://lightning-example-public.s3.amazonaws.com/6.jpeg",
                 ## You can change or add additional images here
             ],
             prompt="a photo of [sks] [cat clay toy] [riding a bicycle]",
@@ -65,6 +65,8 @@ app = L.LightningApp(
     )
 )
 ```
+
+Inspired from [here](https://github.com/ShivamShrirao/diffusers/blob/main/examples/dreambooth/train_dreambooth.py) and [here](https://colab.research.google.com/drive/1SyjkeuPrX7kd_xTBKhcvBGEC8G_ml9RU#scrollTo=1lKGmcIyJbCu).
 
 ### Running locally
 

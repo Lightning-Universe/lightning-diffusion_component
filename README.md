@@ -30,9 +30,9 @@ Run the component for free directly [there](https://lightning.ai/component/UJ7st
 Use the DreamBooth fine-tuning methodology from the paper \`Fine Tuning Text-to-Image Diffusion Models for Subject-Driven Generation\](https://arxiv.org/abs/2208.12242) as follows:
 
 ```python
-import diffusers
 import lightning as L
-from lightning_diffusion import BaseDiffusion, download_from_lightning_cloud
+from diffusers import StableDiffusionPipeline
+from lightning_diffusion import BaseDiffusion, DreamBoothTuner, models, download_from_lightning_cloud
 
 class ServeDreamBoothDiffusion(BaseDiffusion):
     def setup(self):

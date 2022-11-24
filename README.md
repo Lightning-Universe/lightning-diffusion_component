@@ -1,6 +1,10 @@
 # Lightning Diffusion Component
 
+<<<<<<< HEAD
 Lightning Diffusion provides components to finetune and serve diffusion model on [lightning.ai](https://lightning.ai/). For example, save this code snippet as `app.py` and run the below commands
+=======
+Lightning Diffusion provides components to finetune and serve diffusion model on [lightning.ai](https://lightning.ai/). For example, save this code snippet as `component.py` and run the below commands
+>>>>>>> main
 
 ### Serve ANY Diffusion Models
 
@@ -24,6 +28,8 @@ class ServeDiffusion(BaseDiffusion):
 
 app = L.LightningApp(ServeDiffusion())
 ```
+
+Run the component for free directly [there](https://lightning.ai/component/UJ7stJI225-Serve%20Dreambooth%20Diffusion).
 
 ### Serve ANY fine-tuned Diffusion Models
 
@@ -71,8 +77,15 @@ app = L.LightningApp(
 )
 ```
 
+<<<<<<< HEAD
 To customize our own DreamBooth diffusion model, you need provide your own images URL and a prompt.
 The prompt needs to be in the following format with the `[...]` included.
+=======
+To customize the Diffusion model to your own need, simply provide your own images URL(s) and an associated prompt.
+
+The prompt needs to be in the following format with the `[...]` included.
+
+>>>>>>> main
 Reference Format: `A photo of [NOUN] [DESCRIPTIVE CLASS] [DESCRIPTION FOR THE NEW GENERATED IMAGES]`.
 
 Inspired from [here](https://github.com/ShivamShrirao/diffusers/blob/main/examples/dreambooth/train_dreambooth.py) and [here](https://colab.research.google.com/drive/1SyjkeuPrX7kd_xTBKhcvBGEC8G_ml9RU#scrollTo=1lKGmcIyJbCu).

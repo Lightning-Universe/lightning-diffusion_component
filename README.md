@@ -5,7 +5,6 @@ Lightning Diffusion provides components to finetune and serve diffusion model on
 ### Serve ANY Diffusion Models
 
 ```python
-# !pip install lightning_diffusion@git+https://github.com/Lightning-AI/lightning-diffusion.git
 import diffusers
 import lightning as L
 from lightning_diffusion import BaseDiffusion, download_from_lightning_cloud

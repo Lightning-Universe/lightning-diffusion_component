@@ -12,7 +12,8 @@ from lightning_diffusion import BaseDiffusion, download_from_lightning_cloud
 
 class ServeDiffusion(BaseDiffusion):
     def setup(self, *args, **kwargs):
-        download_from_lightning_cloud("daniela/stable_diffusion", version="latest", output_dir="model")
+        download_from_lightning_cloud(
+            "daniela/stable_diffusion", version="latest", output_dir="model")
         self.model = diffusers.StableDiffusionPipeline.from_pretrained("model").to(self.device)
 
     def predict(self, data):

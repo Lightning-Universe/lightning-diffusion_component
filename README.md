@@ -62,6 +62,8 @@ class ServeDreamBoothDiffusion(BaseDiffusion):
 app = L.LightningApp(ServeDreamBoothDiffusion())
 ```
 
+Run the component for free directly [there](https://lightning.ai/component/67826ad38c-Serve%20Dreambooth%20Diffusion).
+
 To customize the Diffusion model to your own need, simply provide your own images URL(s) and an associated prompt.
 
 The prompt needs to be in the following format with the `[...]` included.

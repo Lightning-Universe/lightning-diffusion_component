@@ -1,10 +1,6 @@
 # Lightning Diffusion Component
 
-<<<<<<< HEAD
-Lightning Diffusion provides components to finetune and serve diffusion model on [lightning.ai](https://lightning.ai/). For example, save this code snippet as `app.py` and run the below commands
-=======
 Lightning Diffusion provides components to finetune and serve diffusion model on [lightning.ai](https://lightning.ai/). For example, save this code snippet as `component.py` and run the below commands
->>>>>>> main
 
 ### Serve ANY Diffusion Models
 

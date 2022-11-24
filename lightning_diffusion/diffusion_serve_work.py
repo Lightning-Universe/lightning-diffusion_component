@@ -1,7 +1,7 @@
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
-from lightning.app.components.serve import PythonServer
 from lightning.app import LightningFlow
+from lightning.app.components.serve import PythonServer
 from pydantic import BaseModel
 
 
@@ -22,12 +22,20 @@ class DreamBoothOutput(BaseModel):
 
 
 class DiffusionServe(PythonServer):
-    def __init__(self,
-                 parent_flow: LightningFlow,
-                 host: Optional[str] = "127.0.0.1",
-                 port: Optional[int] = 7777,
-                 **kwargs):
-        super().__init__(host=host, port=port, input_type=DreamBoothInput, output_type=DreamBoothOutput, **kwargs)
+    def __init__(
+        self,
+        parent_flow: LightningFlow,
+        host: Optional[str] = "127.0.0.1",
+        port: Optional[int] = 7777,
+        **kwargs
+    ):
+        super().__init__(
+            host=host,
+            port=port,
+            input_type=DreamBoothInput,
+            output_type=DreamBoothOutput,
+            **kwargs
+        )
         self._parent_flow = parent_flow
 
     def setup(self, *args, **kwargs):
@@ -35,4 +43,3 @@ class DiffusionServe(PythonServer):
 
     def predict(self, prompt: str):
         return self._parent_flow.predict(prompt)
-

@@ -4,19 +4,17 @@ import os
 import zipfile
 
 import requests
-from .save import (
-    _download_and_extract_data_to,
-    get_linked_output_dir,
-)
-from .utils import get_model_data, LIGHTNING_CLOUD_URL, split_name, stage
-from .utils import LIGHTNING_STORAGE_DIR
 
+from .save import _download_and_extract_data_to, get_linked_output_dir
+from .utils import (
+    LIGHTNING_CLOUD_URL,
+    LIGHTNING_STORAGE_DIR,
+    get_model_data,
+    split_name,
+    stage,
+)
 
 logging.basicConfig(level=logging.INFO)
-
-
-
-
 
 
 def download_from_lightning_cloud(
@@ -42,7 +40,9 @@ def download_from_lightning_cloud(
     None
     """
     version = version or "latest"
-    username, model_name, version = split_name(name, version=version, l_stage=stage.DOWNLOAD)
+    username, model_name, version = split_name(
+        name, version=version, l_stage=stage.DOWNLOAD
+    )
 
     linked_output_dir = ""
     if not output_dir:
@@ -55,7 +55,9 @@ def download_from_lightning_cloud(
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
 
-    response = requests.get(f"{LIGHTNING_CLOUD_URL}/v1/models?name={username}/{model_name}&version={version}")
+    response = requests.get(
+        f"{LIGHTNING_CLOUD_URL}/v1/models?name={username}/{model_name}&version={version}"
+    )
     assert response.status_code == 200, (
         f"Unable to download the model with name {name} and version {version}."
         " Maybe reach out to the model owner or check the arguments again?"
@@ -69,7 +71,9 @@ def download_from_lightning_cloud(
     _download_and_extract_data_to(output_dir, download_url, progress_bar)
 
     if linked_output_dir:
-        logging.info(f"Linking the downloaded folder from {output_dir} to {linked_output_dir} folder.")
+        logging.info(
+            f"Linking the downloaded folder from {output_dir} to {linked_output_dir} folder."
+        )
         if os.path.islink(linked_output_dir):
             os.unlink(linked_output_dir)
         if os.path.exists(linked_output_dir):
@@ -77,6 +81,6 @@ def download_from_lightning_cloud(
                 os.rmdir(linked_output_dir)
 
         os.symlink(output_dir, linked_output_dir)
-    
-    with zipfile.ZipFile(f"{output_dir}/checkpoint.zip", 'r') as zip_ref:
-            zip_ref.extractall()
+
+    with zipfile.ZipFile(f"{output_dir}/checkpoint.zip", "r") as zip_ref:
+        zip_ref.extractall()

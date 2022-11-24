@@ -1,7 +1,7 @@
 from pathlib import Path
-from torchvision import transforms
-from torch.utils.data import Dataset
+
 from PIL import Image
+from torch.utils.data import Dataset
 from torchvision import transforms
 
 
@@ -17,7 +17,7 @@ class DreamBoothDataset(Dataset):
         center_crop=False,
         length=None,
     ):
-        self.size = size # image size
+        self.size = size  # image size
         self.center_crop = center_crop
         self.tokenizer = tokenizer
 
@@ -51,8 +51,12 @@ class DreamBoothDataset(Dataset):
         # image transform
         self.image_transforms = transforms.Compose(
             [
-                transforms.Resize(size, interpolation=transforms.InterpolationMode.BILINEAR),
-                transforms.CenterCrop(size) if center_crop else transforms.RandomCrop(size),
+                transforms.Resize(
+                    size, interpolation=transforms.InterpolationMode.BILINEAR
+                ),
+                transforms.CenterCrop(size)
+                if center_crop
+                else transforms.RandomCrop(size),
                 transforms.ToTensor(),
                 transforms.Normalize([0.5], [0.5]),
             ]
@@ -64,7 +68,9 @@ class DreamBoothDataset(Dataset):
     def __getitem__(self, index):
         example = {}
         # load exaples of my concept
-        instance_image = Image.open(self.instance_images_path[index % self.num_instance_images])
+        instance_image = Image.open(
+            self.instance_images_path[index % self.num_instance_images]
+        )
 
         if not instance_image.mode == "RGB":
             instance_image = instance_image.convert("RGB")
@@ -73,15 +79,18 @@ class DreamBoothDataset(Dataset):
         example["instance_images"] = self.image_transforms(instance_image)
         # tokenize text prompt
         example["instance_prompt_ids"] = self.tokenizer(
-                                        self.instance_prompt,
-                                        padding="do_not_pad",
-                                        truncation=True,
-                                        max_length=self.tokenizer.model_max_length,).input_ids
+            self.instance_prompt,
+            padding="do_not_pad",
+            truncation=True,
+            max_length=self.tokenizer.model_max_length,
+        ).input_ids
 
         # handle prior examples
         if self.class_data_root:
             # load prior examples
-            class_image = Image.open(self.class_images_path[index % self.num_class_images])
+            class_image = Image.open(
+                self.class_images_path[index % self.num_class_images]
+            )
             # make it RGB
             if not class_image.mode == "RGB":
                 class_image = class_image.convert("RGB")
@@ -96,6 +105,7 @@ class DreamBoothDataset(Dataset):
             ).input_ids
 
         return example
+
 
 # data set of the text
 class PromptDataset(Dataset):

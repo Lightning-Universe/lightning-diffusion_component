@@ -15,7 +15,6 @@ LIGHTNING_STORAGE_DIR = f"{LIGHTNING_DIR}/lightning_model_store"
 LIGHTNING_CLOUD_URL = os.getenv("LIGHTNING_CLOUD_URL", default="https://lightning.ai")
 
 
-
 def _split_name(name: str, version: str, l_stage: stage):
     if l_stage == stage.UPLOAD:
         username = ""

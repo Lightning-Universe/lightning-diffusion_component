@@ -1,13 +1,15 @@
 import lightning as L
-from lightning_diffusion import BaseDiffusion, DreamBoothTuner, models
 from diffusers import StableDiffusionPipeline
+
+from lightning_diffusion import BaseDiffusion, DreamBoothTuner, models
 from lightning_diffusion.model_cloud import download_from_lightning_cloud
 
 
 class ServeDreamBoothDiffusion(BaseDiffusion):
-
     def setup(self):
-        download_from_lightning_cloud("daniela/stable_diffusion", version="latest", output_dir="model")
+        download_from_lightning_cloud(
+            "daniela/stable_diffusion", version="latest", output_dir="model"
+        )
         self.model = StableDiffusionPipeline.from_pretrained(
             **models.get_kwargs("model", self.weights_drive)
         ).to(self.device)
@@ -27,7 +29,6 @@ class ServeDreamBoothDiffusion(BaseDiffusion):
     def predict(self, data):
         out = self.model(prompt=data.prompt)
         return {"image": self.serialize(out[0][0])}
-
 
 
 app = L.LightningApp(

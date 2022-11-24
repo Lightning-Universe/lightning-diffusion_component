@@ -2,7 +2,6 @@
 
 Lightning Diffusion provides components to finetune and serve diffusion model on [lightning.ai](https://lightning.ai/). For example, save this code snippet as `app.py` and run the below commands
 
-
 ### Serve ANY Diffusion Models
 
 ```python
@@ -13,11 +12,9 @@ from lightning_diffusion import BaseDiffusion, models
 
 
 class ServeDiffusion(BaseDiffusion):
-
     def setup(self, *args, **kwargs):
         self.model = diffusers.StableDiffusionPipeline.from_pretrained(
-            "CompVis/stable-diffusion-v1-4",
-            **models.extras
+            "CompVis/stable-diffusion-v1-4", **models.extras
         ).to(self.device)
 
     def predict(self, data):
@@ -30,8 +27,7 @@ app = L.LightningApp(ServeDiffusion())
 
 ### Serve ANY fine-tuned Diffusion Models
 
-Use the DreamBooth fine-tuning methodology from the paper `Fine Tuning Text-to-Image Diffusion Models for Subject-Driven Generation](https://arxiv.org/abs/2208.12242) as follows:
-
+Use the DreamBooth fine-tuning methodology from the paper \`Fine Tuning Text-to-Image Diffusion Models for Subject-Driven Generation\](https://arxiv.org/abs/2208.12242) as follows:
 
 ```python
 import lightning as L
@@ -40,7 +36,6 @@ from diffusers import StableDiffusionPipeline
 
 
 class ServeDreamBoothDiffusion(BaseDiffusion):
-
     def setup(self):
         self.model = StableDiffusionPipeline.from_pretrained(
             **models.get_kwargs("CompVis/stable-diffusion-v1-4", self.weights_drive),
@@ -61,7 +56,6 @@ class ServeDreamBoothDiffusion(BaseDiffusion):
     def predict(self, data):
         out = self.model(prompt=data.prompt)
         return {"image": self.serialize(out[0][0])}
-
 
 
 app = L.LightningApp(

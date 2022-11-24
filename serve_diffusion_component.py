@@ -1,15 +1,14 @@
 # !pip install lightning_diffusion@git+https://github.com/Lightning-AI/lightning-diffusion.git
-import lightning as L
 import diffusers
+import lightning as L
+
 from lightning_diffusion import BaseDiffusion, models
 
 
 class ServeDiffusion(BaseDiffusion):
-
     def setup(self, *args, **kwargs):
         self.model = diffusers.StableDiffusionPipeline.from_pretrained(
-            "CompVis/stable-diffusion-v1-4",
-            **models.extras
+            "CompVis/stable-diffusion-v1-4", **models.extras
         ).to(self.device)
 
     def predict(self, data):

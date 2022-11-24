@@ -2,19 +2,20 @@ import abc
 import base64
 import io
 import os
-import lightning as L
-from typing import Optional
 from copy import deepcopy
+from typing import Optional
+
+import lightning as L
+from diffusers import StableDiffusionPipeline
+from lightning.app.storage import Drive
 from lightning.app.utilities.app_helpers import is_overridden
+
 from lightning_diffusion.diffusion_serve import DiffusionServe
 from lightning_diffusion.lite_finetuner import Finetuner
-from lightning.app.storage import Drive
-from diffusers import StableDiffusionPipeline
 
 
-def trimmed_flow(flow: 'L.LightningFlow') -> 'L.LightningFlow':
-    """Trims a flow to not have any of the internal attributes.
-    """
+def trimmed_flow(flow: "L.LightningFlow") -> "L.LightningFlow":
+    """Trims a flow to not have any of the internal attributes."""
     backend = flow._backend
     flow._backend = None
     for f in flow.flows:
@@ -29,8 +30,6 @@ def trimmed_flow(flow: 'L.LightningFlow') -> 'L.LightningFlow':
     return flow_copy
 
 
-
-
 class LoadBalancer(L.LightningFlow):
     def __init__(self, server: L.LightningWork, num_replicas: int = 1):
         super().__init__()
@@ -43,16 +42,15 @@ class LoadBalancer(L.LightningFlow):
         self.url = self.server.url
 
     def configure_layout(self):
-        return {'name': 'API', 'content': self.server}
+        return {"name": "API", "content": self.server}
 
 
 class BaseDiffusion(L.LightningFlow, abc.ABC):
-
     def __init__(
         self,
         finetune_cloud_compute: Optional[L.CloudCompute] = None,
         serve_cloud_compute: Optional[L.CloudCompute] = None,
-        num_replicas=1
+        num_replicas=1,
     ):
         super().__init__()
         if not is_overridden("predict", instance=self, parent=BaseDiffusion):
@@ -72,7 +70,9 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
             )
 
         self.load_balancer = LoadBalancer(
-            DiffusionServe(_trimmed_flow, cloud_compute=serve_cloud_compute, start_with_flow=False),
+            DiffusionServe(
+                _trimmed_flow, cloud_compute=serve_cloud_compute, start_with_flow=False
+            ),
             num_replicas=num_replicas,
         )
 
@@ -94,6 +94,7 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
     @property
     def device(self):
         import torch
+
         local_rank = os.getenv("LOCAL_RANK", "0")
         return f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu"
 
@@ -117,4 +118,4 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
             self.load_balancer.run()
 
     def configure_layout(self):
-        return {'name': 'API', 'content': self.load_balancer.url}
+        return {"name": "API", "content": self.load_balancer.url}

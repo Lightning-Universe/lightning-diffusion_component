@@ -43,7 +43,8 @@ def webpage(
     # User Interface
     with ui.row().style("gap:10em"):
         with ui.column():
-            ui.label("Stable Diffusion 2.0 with Lightning.AI").classes("text-2xl")
+            classes = "m-2 bg-gray-200 border-2 border-gray-200 rounded w-64 py-2 px-4 text-gray-700 focus:outline-none focus:bg-white focus:border-purple-500"
+            ui.label("Stable Diffusion 2.0 with Lightning.AI").classes(classes)
             prompt = ui.input("prompt").style("width: 20em")
             ui.button("Generate", on_click=generate_image).style("width: 15em")
             image = ui.image().style("width: 60em")

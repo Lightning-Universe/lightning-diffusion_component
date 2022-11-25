@@ -54,8 +54,14 @@ class DiffusionServeInteractive(L.LightningWork):
             os.system("curl https://pl-public-data.s3.amazonaws.com/dream_stable_diffusion/512-base-ema.ckpt -o checkpoint.ckpt")
             os.system("echo checkpoint.ckpt > .lightningignore ")
 
-        precision = 16 if torch.cuda.is_available() else 32
-        self._trainer = L.Trainer(accelerator="auto", devices=1, precision=precision, enable_progress_bar=False)
+        if os.getenv("LIGHTNING_CLOUD_APP_ID", None) is None:
+            precision = 16
+            accelerator = "cpu"
+        else:
+            precision = 16 if torch.cuda.is_available() else 32
+            accelerator = "auto"
+
+        self._trainer = L.Trainer(accelerator=accelerator, devices=1, precision=precision, enable_progress_bar=False)
 
         self._model = LightningStableDiffusion(
             config_path="v2-inference-v.yaml", checkpoint_path="checkpoint.ckpt", device=self._trainer.strategy.root_device.type

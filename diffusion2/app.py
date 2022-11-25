@@ -23,11 +23,6 @@ import numpy as np
 class Text(BaseModel):
     text: Optional[str]
 
-    @staticmethod
-    def _get_sample_data() -> Dict[Any, Any]:
-        return {"text": "sample_data"}
-
-
 class PromptDataset(Dataset):
     def __init__(self, prompts: List[str]):
         super().__init__()

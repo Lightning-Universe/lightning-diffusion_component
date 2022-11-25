@@ -1,6 +1,7 @@
 # !pip install 'git+https://github.com/Lightning-AI/stablediffusion.git@lit'
 # !curl https://raw.githubusercontent.com/Lightning-AI/stablediffusion/main/configs/stable-diffusion/v2-inference.yaml -o v2-inference.yaml
 import lightning as L
+import lightning.app.components.serve as serve
 import os
 import torch, base64
 from io import BytesIO

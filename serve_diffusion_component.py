@@ -2,6 +2,7 @@
 import diffusers
 import lightning as L
 from lightning_diffusion import BaseDiffusion, download_from_lightning_cloud
+import torch
 
 class ServeDiffusion(BaseDiffusion):
     def setup(self, *args, **kwargs):
@@ -9,8 +10,9 @@ class ServeDiffusion(BaseDiffusion):
         self.model = diffusers.StableDiffusionPipeline.from_pretrained("model").to(self.device)
 
     def predict(self, data):
-        out = self.model(prompt=data.prompt, num_inference_steps=23)
-        return {"image": self.serialize(out[0][0])}
+        with torch.autocast(device_type="cuda", dtype=torch.float16):
+            out = self.model(prompt=data.prompt, num_inference_steps=23)
+            return {"image": self.serialize(out[0][0])}
 
 
-app = L.LightningApp(ServeDiffusion(interactive=True))
+app = L.LightningApp(ServeDiffusion(interactive=False))

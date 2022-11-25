@@ -185,3 +185,4 @@ requirements/base.txt
 .storage
 user_images
 preservation_images
+model

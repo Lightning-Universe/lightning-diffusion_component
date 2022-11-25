@@ -5,12 +5,13 @@ protobuf<4.21.0
 lightning_hpo
 Pillow>=2.9.0
 numpy>=1.9.2
-diffusers==0.7.2
+diffusers==0.8.0
 transformers==4.24.0
 deepspeed
 ftfy
 lightning-api-access
 clip@git+https://github.com/openai/CLIP.git
-lightning==1.8.3.post0
+lightning>=1.8.3.post0
 redis
 s3fs
+nicegui

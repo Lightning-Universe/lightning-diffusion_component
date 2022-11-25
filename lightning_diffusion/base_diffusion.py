@@ -4,14 +4,19 @@ import io
 import os
 from copy import deepcopy
 from typing import Optional
-
+import platform
 import lightning as L
 from diffusers import StableDiffusionPipeline
 from lightning.app.storage import Drive
 from lightning.app.utilities.app_helpers import is_overridden
 
+import operator
+import platform
+from lightning_utilities.core.imports import compare_version
+
 from lightning_diffusion.diffusion_serve import DiffusionServe
 from lightning_diffusion.lite_finetuner import Finetuner
+from lightning_diffusion.diffusion_juspty import DiffusionServeJuspty
 
 
 def trimmed_flow(flow: "L.LightningFlow") -> "L.LightningFlow":
@@ -51,6 +56,7 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
         finetune_cloud_compute: Optional[L.CloudCompute] = L.CloudCompute("gpu-fast", disk_size=80),
         serve_cloud_compute: Optional[L.CloudCompute] = L.CloudCompute("gpu", disk_size=80),
         num_replicas=1,
+        interactive: bool = False,
     ):
         super().__init__()
         if not is_overridden("predict", instance=self, parent=BaseDiffusion):
@@ -59,6 +65,7 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
         self.weights_drive = Drive("lit://weights")
         self._model = None
         self._device = None
+        self.interactive = interactive
 
         _trimmed_flow = trimmed_flow(self)
 
@@ -69,15 +76,22 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
                 cloud_compute=finetune_cloud_compute,
             )
 
-        self.load_balancer = LoadBalancer(
-            DiffusionServe(
-                _trimmed_flow,
+        if not self.interactive:
+            self.load_balancer = LoadBalancer(
+                DiffusionServe(
+                    _trimmed_flow,
+                    cloud_compute=serve_cloud_compute,
+                    # Starts only if there isn't a finetuner
+                    start_with_flow=self.finetuner is None,
+                ),
+                num_replicas=num_replicas,
+            )
+        else:
+            self.load_balancer = DiffusionServeJuspty(
+                flow=_trimmed_flow,
                 cloud_compute=serve_cloud_compute,
-                # Starts only if there isn't a finetuner
                 start_with_flow=self.finetuner is None,
-            ),
-            num_replicas=num_replicas,
-        )
+            )
 
     @staticmethod
     def serialize(image):
@@ -98,8 +112,14 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
     def device(self):
         import torch
 
-        local_rank = os.getenv("LOCAL_RANK", "0")
-        return f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu"
+        _TORCH_GREATER_EQUAL_1_12 = compare_version("torch", operator.ge, "1.12.0")
+
+        local_rank = int(os.getenv("LOCAL_RANK", "0"))
+
+        if _TORCH_GREATER_EQUAL_1_12 and torch.backends.mps.is_available() and platform.processor() in ("arm", "arm64"):
+            return torch.device("mps", local_rank)
+        else:
+            return f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu"
 
     @abc.abstractmethod
     def setup(self, *args, **kwargs):
@@ -121,4 +141,5 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
             self.load_balancer.run()
 
     def configure_layout(self):
-        return {"name": "API", "content": self.load_balancer.url}
+        name = "Demo" if isinstance(self.load_balancer, DiffusionServeJuspty) else "API"
+        return [{"name": name, "content": self.load_balancer.url}]

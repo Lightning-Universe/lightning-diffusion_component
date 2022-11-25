@@ -13,4 +13,4 @@ class ServeDiffusion(BaseDiffusion):
         return {"image": self.serialize(out[0][0])}
 
 
-app = L.LightningApp(ServeDiffusion())
+app = L.LightningApp(ServeDiffusion(interactive=True))

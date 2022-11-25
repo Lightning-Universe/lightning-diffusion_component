@@ -1,0 +1,3 @@
+# This is required only when a Lightning framework released is made
+redis
+s3fs

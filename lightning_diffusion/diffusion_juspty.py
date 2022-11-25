@@ -1,10 +1,9 @@
-from lightning import LightningWork
+import lightning as L
 from nicegui import ui
 from typing import Optional
 import asyncio
 import functools
 from typing import Callable, Any
-from nicegui import ui
 from pydantic import BaseModel
 
 class DreamBoothInput(BaseModel):
@@ -34,7 +33,7 @@ def webpage(flow, host: Optional[str] = None, port: Optional[int] = None):
     ui.run(host=host, port=port, reload=False)
 
 
-class DiffusionServeJuspty(LightningWork):
+class DiffusionServeJuspty(L.LightningWork):
 
     def __init__(self, *args, flow, **kwargs):
         super().__init__(*args, flow, **kwargs)

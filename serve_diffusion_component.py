@@ -10,7 +10,7 @@ class ServeDiffusion(BaseDiffusion):
         self.model = diffusers.StableDiffusionPipeline.from_pretrained("model").to(self.device)
 
     def predict(self, data):
-        with torch.autocast(device_type="cuda", dtype=torch.float16):
+        with torch.autocast(device_type=self.device.type, dtype=torch.float16):
             out = self.model(prompt=data.prompt, num_inference_steps=23)
             return {"image": self.serialize(out[0][0])}
 

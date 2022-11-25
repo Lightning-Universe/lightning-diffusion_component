@@ -1,0 +1,3 @@
+# Required only temporary
+redis
+s3fs

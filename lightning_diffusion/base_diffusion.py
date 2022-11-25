@@ -76,7 +76,7 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
                 cloud_compute=finetune_cloud_compute,
             )
 
-        if not self.interactive:    
+        if not self.interactive:
             self.load_balancer = LoadBalancer(
                 DiffusionServe(
                     _trimmed_flow,

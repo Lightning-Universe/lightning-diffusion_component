@@ -78,6 +78,6 @@ class DiffusionServeInteractive(L.LightningWork):
         webpage(self.predict, host=self.host, port=self.port)
 
 
-component = DiffusionServeInteractive(cloud_compute=L.CloudCompute("gpu-rtx"))
+component = DiffusionServeInteractive(cloud_compute=L.CloudCompute("gpu-rtx", disk_size=80))
 
 app = L.LightningApp(component)

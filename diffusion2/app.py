@@ -47,7 +47,7 @@ class DiffusionServer(serve.PythonServer):
         return {"image": f"data:image/png;base64,{img_str}"}
 
 component = DiffusionServer(
-   input_type=Text, output_type=serve.Image, cloud_compute=L.CloudCompute("gpu-rtx")
+   input_type=Text, output_type=serve.Image, cloud_compute=L.CloudCompute("gpu-rtx", disk_size=80)
 )
 
 app = L.LightningApp(component)

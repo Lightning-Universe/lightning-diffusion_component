@@ -1,23 +1,18 @@
 # !pip install nicegui
 # !pip install 'git+https://github.com/Lightning-AI/stablediffusion.git@lit'
 # !curl https://raw.githubusercontent.com/Lightning-AI/stablediffusion/main/configs/stable-diffusion/v2-inference.yaml -o v2-inference.yaml
+import lightning as L
 import os
-
-os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
-
-import asyncio
-import base64
-import functools
+import asyncio, torch, base64, functools
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Callable, Optional
-
-import lightning as L
-import torch
 from ldm.lightning import LightningStableDiffusion, PromptDataset
 from nicegui import ui
 from pydantic import BaseModel
-from torch.utils.data import DataLoader
+
+
+os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
 
 class Text(BaseModel):
@@ -46,6 +41,7 @@ def webpage(
             classes = "m-2 bg-gray-200 border-2 border-gray-200 rounded w-64 py-2 px-4 text-gray-700 focus:outline-none focus:bg-white focus:border-purple-500"
             ui.label("Stable Diffusion 2.0 with Lightning.AI").classes(classes)
             prompt = ui.input("prompt").style("width: 20em")
+            prompt.value = "Woman painting a large red egg in a dali landscape"
             ui.button("Generate", on_click=generate_image).style("width: 15em")
             image = ui.image().style("width: 60em")
 
@@ -92,7 +88,7 @@ class DiffusionServeInteractive(L.LightningWork):
     def predict(self, request):
         image = self._trainer.predict(
             self._model,
-            DataLoader(PromptDataset([request.text])),
+            torch.utils.data.DataLoader(PromptDataset([request.text])),
         )[0][0]
         buffer = BytesIO()
         image.save(buffer, format="PNG")

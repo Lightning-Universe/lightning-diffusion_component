@@ -30,7 +30,7 @@ def webpage(predict_fn, host: Optional[str] = None, port: Optional[int] = None):
 
     async def generate_image():
         image.source = "https://dummyimage.com/600x400/ccc/000000.png&text=building+image..."
-        prediction = await io_bound(predict_fn, data=Text(prompt=prompt.value))
+        prediction = await io_bound(predict_fn, request=Text(text=prompt.value))
         image.source = f"data:image/png;base64,{prediction['image']}"
 
     # User Interface

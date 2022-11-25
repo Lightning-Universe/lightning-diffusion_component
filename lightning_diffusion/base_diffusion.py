@@ -16,7 +16,7 @@ from lightning_utilities.core.imports import compare_version
 
 from lightning_diffusion.diffusion_serve import DiffusionServe
 from lightning_diffusion.lite_finetuner import Finetuner
-from lightning_diffusion.diffusion_gradio import DiffusionServeGradio
+from lightning_diffusion.diffusion_juspty import DiffusionFrontend
 
 
 def trimmed_flow(flow: "L.LightningFlow") -> "L.LightningFlow":
@@ -36,6 +36,7 @@ def trimmed_flow(flow: "L.LightningFlow") -> "L.LightningFlow":
 
 
 class LoadBalancer(L.LightningFlow):
+
     def __init__(self, server: L.LightningWork, num_replicas: int = 1):
         super().__init__()
         self.server = server
@@ -56,7 +57,7 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
         finetune_cloud_compute: Optional[L.CloudCompute] = L.CloudCompute("gpu-fast", disk_size=80),
         serve_cloud_compute: Optional[L.CloudCompute] = L.CloudCompute("gpu", disk_size=80),
         num_replicas=1,
-        gradio: bool = False,
+        interactive: bool = False,
     ):
         super().__init__()
         if not is_overridden("predict", instance=self, parent=BaseDiffusion):
@@ -65,7 +66,7 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
         self.weights_drive = Drive("lit://weights")
         self._model = None
         self._device = None
-        self.gradio = gradio
+        self.interactive = interactive
 
         _trimmed_flow = trimmed_flow(self)
 
@@ -76,7 +77,9 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
                 cloud_compute=finetune_cloud_compute,
             )
 
-        if not self.gradio:    
+        self.load_balancer = None
+
+        if not self.interactive:    
             self.load_balancer = LoadBalancer(
                 DiffusionServe(
                     _trimmed_flow,
@@ -87,11 +90,7 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
                 num_replicas=num_replicas,
             )
         else:
-            self.load_balancer = DiffusionServeGradio(
-                flow=_trimmed_flow,
-                cloud_compute=serve_cloud_compute,
-                start_with_flow=self.finetuner is None,
-            )
+            self.frontend = DiffusionFrontend()
 
     @staticmethod
     def serialize(image):
@@ -136,10 +135,14 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
         if self.finetuner:
             self.finetuner.run()
             if self.finetuner.has_succeeded:
-                self.load_balancer.run()
+                if self.load_balancer:
+                    self.load_balancer.run()
         else:
-            self.load_balancer.run()
+            if self.load_balancer:
+                self.load_balancer.run()
 
     def configure_layout(self):
-        name = "Demo" if isinstance(self.load_balancer, DiffusionServeGradio) else "API"
-        return [{"name": name, "content": self.load_balancer.url}]
+        if self.load_balancer:
+            return [{"name": "API", "content": self.load_balancer.url}]
+        else:
+            return [{"name": "Demo", "content": self.frontend}]

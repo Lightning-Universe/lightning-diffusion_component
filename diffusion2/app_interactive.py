@@ -1,4 +1,5 @@
 # !pip install Pillow
+# !pip install nicegui
 # !pip install 'git+https://github.com/Lightning-AI/stablediffusion.git@lit'
 # !curl https://raw.githubusercontent.com/Lightning-AI/stablediffusion/main/configs/stable-diffusion/v2-inference-v.yaml -o v2-inference-v.yaml
 import os
@@ -17,6 +18,7 @@ from PIL import Image
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 from nicegui import ui
+import numpy as np
 import asyncio
 import functools
 
@@ -24,11 +26,14 @@ import functools
 class Text(BaseModel):
     text: Optional[str]
 
+<<<<<<< HEAD
     @staticmethod
     def _get_sample_data() -> Dict[Any, Any]:
         return {"text": "sample_data"}
 
 
+=======
+>>>>>>> main
 class PromptDataset(Dataset):
     def __init__(self, prompts: List[str]):
         super().__init__()
@@ -51,6 +56,10 @@ class StableDiffusionModel(L.LightningModule):
         super().__init__()
 
         config = OmegaConf.load(f"{config_path}")
+<<<<<<< HEAD
+=======
+        config.model.params.unet_config["params"]["use_fp16"] = False
+>>>>>>> main
         config.model.params.cond_stage_config["params"] = {"device": device}
 
         checkpoint = torch.load(checkpoint_path, map_location="cpu")
@@ -81,7 +90,7 @@ class StableDiffusionModel(L.LightningModule):
 
             x_samples_ddim = self.model.decode_first_stage(samples_ddim)
             x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
-            x_samples_ddim = x_samples_ddim.mul(255).int().permute(0, 2, 3, 1).cpu().numpy()
+            x_samples_ddim = x_samples_ddim.mul(255).permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
             pil_results = [Image.fromarray(x_sample) for x_sample in x_samples_ddim]
         return pil_results
 

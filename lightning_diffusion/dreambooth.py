@@ -17,7 +17,6 @@ from lightning_diffusion.datasets import DreamBoothDataset, PromptDataset
 
 
 class Lite(LightningLite):
-
     def run(self):
         pass
 

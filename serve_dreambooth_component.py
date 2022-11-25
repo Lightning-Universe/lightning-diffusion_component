@@ -1,7 +1,14 @@
 # ! pip install torch diffusers lightning==1.8.3.post0 git+https://github.com/Lightning-AI/lightning-diffusion-component.git
 import lightning as L
 from diffusers import StableDiffusionPipeline
-from lightning_diffusion import BaseDiffusion, DreamBoothTuner, models, download_from_lightning_cloud
+
+from lightning_diffusion import (
+    BaseDiffusion,
+    DreamBoothTuner,
+    download_from_lightning_cloud,
+    models,
+)
+
 
 class ServeDreamBoothDiffusion(BaseDiffusion):
     def setup(self):
@@ -27,5 +34,6 @@ class ServeDreamBoothDiffusion(BaseDiffusion):
     def predict(self, data):
         out = self.model(prompt=data.prompt)
         return {"image": self.serialize(out[0][0])}
+
 
 app = L.LightningApp(ServeDreamBoothDiffusion())

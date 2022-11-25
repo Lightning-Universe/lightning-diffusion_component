@@ -1,6 +1,6 @@
 # Lightning Diffusion Component
 
-Lightning Diffusion provides components to finetune and serve diffusion model on [lightning.ai](https://lightning.ai/). 
+Lightning Diffusion provides components to finetune and serve diffusion model on [lightning.ai](https://lightning.ai/).
 
 Create an account to get 3 free credits !
 
@@ -14,10 +14,10 @@ import diffusers
 import lightning as L
 from lightning_diffusion import BaseDiffusion, download_from_lightning_cloud
 
+
 class ServeDiffusion(BaseDiffusion):
     def setup(self, *args, **kwargs):
-        download_from_lightning_cloud(
-            "daniela/stable_diffusion", version="latest", output_dir="model")
+        download_from_lightning_cloud("daniela/stable_diffusion", version="latest", output_dir="model")
         self.model = diffusers.StableDiffusionPipeline.from_pretrained("model").to(self.device)
 
     def predict(self, data):
@@ -40,14 +40,13 @@ import lightning as L
 from diffusers import StableDiffusionPipeline
 from lightning_diffusion import BaseDiffusion, DreamBoothTuner, models, download_from_lightning_cloud
 
+
 class ServeDreamBoothDiffusion(BaseDiffusion):
     def setup(self):
-        download_from_lightning_cloud(
-            "daniela/stable_diffusion", version="latest", output_dir="model"
+        download_from_lightning_cloud("daniela/stable_diffusion", version="latest", output_dir="model")
+        self.model = StableDiffusionPipeline.from_pretrained(**models.get_kwargs("model", self.weights_drive)).to(
+            self.device
         )
-        self.model = StableDiffusionPipeline.from_pretrained(
-            **models.get_kwargs("model", self.weights_drive)
-        ).to(self.device)
 
     def finetune(self):
         DreamBoothTuner(
@@ -64,6 +63,7 @@ class ServeDreamBoothDiffusion(BaseDiffusion):
     def predict(self, data):
         out = self.model(prompt=data.prompt)
         return {"image": self.serialize(out[0][0])}
+
 
 app = L.LightningApp(ServeDreamBoothDiffusion())
 ```

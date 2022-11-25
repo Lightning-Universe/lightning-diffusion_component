@@ -30,7 +30,7 @@ def webpage(predict_fn, host: Optional[str] = None, port: Optional[int] = None):
 
     async def generate_image():
         image.source = "https://dummyimage.com/600x400/ccc/000000.png&text=building+image..."
-        prediction = await io_bound(predict_fn.predict, data=Text(prompt=prompt.value))
+        prediction = await io_bound(predict_fn, data=Text(prompt=prompt.value))
         image.source = f"data:image/png;base64,{prediction['image']}"
 
     # User Interface
@@ -51,12 +51,10 @@ class DiffusionServeInteractive(L.LightningWork):
         weights_folder.mkdir(parents=True, exist_ok=True)
 
         if not os.path.exists("checkpoint.ckpt"):
-            os.system(
-                "curl https://pl-public-data.s3.amazonaws.com/dream_stable_diffusion/512-base-ema.ckpt -o checkpoint.ckpt")
+            os.system("curl https://pl-public-data.s3.amazonaws.com/dream_stable_diffusion/512-base-ema.ckpt -o checkpoint.ckpt")
 
         precision = 16 if torch.cuda.is_available() else 32
-        self._trainer = L.Trainer(
-            accelerator="auto", devices=1, precision=precision, enable_progress_bar=False)
+        self._trainer = L.Trainer(accelerator="auto", devices=1, precision=precision, enable_progress_bar=False)
 
         self._model = LightningStableDiffusion(
             config_path="v2-inference-v.yaml", checkpoint_path="checkpoint.ckpt", device=self._trainer.strategy.root_device.type

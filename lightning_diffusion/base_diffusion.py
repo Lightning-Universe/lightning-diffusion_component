@@ -1,22 +1,21 @@
 import abc
 import base64
 import io
+import operator
 import os
+import platform
 from copy import deepcopy
 from typing import Optional
-import platform
+
 import lightning as L
 from diffusers import StableDiffusionPipeline
 from lightning.app.storage import Drive
 from lightning.app.utilities.app_helpers import is_overridden
-
-import operator
-import platform
 from lightning_utilities.core.imports import compare_version
 
+from lightning_diffusion.diffusion_juspty import DiffusionServeJuspty
 from lightning_diffusion.diffusion_serve import DiffusionServe
 from lightning_diffusion.lite_finetuner import Finetuner
-from lightning_diffusion.diffusion_juspty import DiffusionServeJuspty
 
 
 def trimmed_flow(flow: "L.LightningFlow") -> "L.LightningFlow":
@@ -53,8 +52,14 @@ class LoadBalancer(L.LightningFlow):
 class BaseDiffusion(L.LightningFlow, abc.ABC):
     def __init__(
         self,
-        finetune_cloud_compute: Optional[L.CloudCompute] = L.CloudCompute("gpu-fast", disk_size=80),
-        serve_cloud_compute: Optional[L.CloudCompute] = L.CloudCompute("gpu", disk_size=80),
+        finetune_cloud_compute: Optional[L.CloudCompute] = L.CloudCompute(
+            "gpu-fast",
+            disk_size=80,
+        ),
+        serve_cloud_compute: Optional[L.CloudCompute] = L.CloudCompute(
+            "gpu",
+            disk_size=80,
+        ),
         num_replicas=1,
         interactive: bool = False,
     ):
@@ -116,10 +121,16 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
 
         local_rank = int(os.getenv("LOCAL_RANK", "0"))
 
-        if _TORCH_GREATER_EQUAL_1_12 and torch.backends.mps.is_available() and platform.processor() in ("arm", "arm64"):
+        if (
+            _TORCH_GREATER_EQUAL_1_12
+            and torch.backends.mps.is_available()
+            and platform.processor() in ("arm", "arm64")
+        ):
             return torch.device("mps", local_rank)
         else:
-            return torch.device(f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu")
+            return torch.device(
+                f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu"
+            )
 
     @abc.abstractmethod
     def setup(self, *args, **kwargs):

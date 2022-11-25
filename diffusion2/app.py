@@ -50,7 +50,7 @@ class DiffusionServer(serve.PythonServer):
     def predict(self, request):
         image = self._trainer.predict(
             self._model,
-            DataLoader(PromptDataset([request.text])),
+            torch.utils.data.DataLoader(PromptDataset([request.text])),
         )[0][0]
         buffer = BytesIO()
         image.save(buffer, format="PNG")

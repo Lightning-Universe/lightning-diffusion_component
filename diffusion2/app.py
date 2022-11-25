@@ -17,6 +17,7 @@ from omegaconf import OmegaConf
 from PIL import Image
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
+import numpy as np
 
 
 class Text(BaseModel):
@@ -49,6 +50,7 @@ class StableDiffusionModel(L.LightningModule):
         super().__init__()
 
         config = OmegaConf.load(f"{config_path}")
+        config.model.params.unet_config["params"]["use_fp16"] = False
         config.model.params.cond_stage_config["params"] = {"device": device}
 
         checkpoint = torch.load(checkpoint_path, map_location="cpu")
@@ -79,7 +81,7 @@ class StableDiffusionModel(L.LightningModule):
 
             x_samples_ddim = self.model.decode_first_stage(samples_ddim)
             x_samples_ddim = torch.clamp((x_samples_ddim + 1.0) / 2.0, min=0.0, max=1.0)
-            x_samples_ddim = x_samples_ddim.mul(255).int().permute(0, 2, 3, 1).cpu().numpy()
+            x_samples_ddim = x_samples_ddim.mul(255).permute(0, 2, 3, 1).cpu().numpy().astype(np.uint8)
             pil_results = [Image.fromarray(x_sample) for x_sample in x_samples_ddim]
         return pil_results
 
@@ -108,7 +110,7 @@ class DiffusionServer(serve.PythonServer):
         return {"image": f"data:image/png;base64,{img_str}"}
 
 component = DiffusionServer(
-   input_type=Text, output_type=serve.Image, cloud_compute=L.CloudCompute('gpu')
+   input_type=Text, output_type=serve.Image, cloud_compute=L.CloudCompute('gpu-rtx')
 )
 
 app = L.LightningApp(component)

@@ -22,7 +22,7 @@ def download_from_lightning_cloud(
     version: str = "latest",
     output_dir: str = "",
     progress_bar: bool = True,
-    overwrite: bool = True,
+    overwrite: bool = False,
 ):
     """
     Parameters
@@ -35,7 +35,7 @@ def download_from_lightning_cloud(
         The target directory, where the model and other data will be stored. If not passed,
             the data will be stored in `$HOME/.lightning/lightning_model_store/<username>/<model_name>/<version>`.
             (`version` defaults to `latest`)
-    :param: overwrite 
+    :param: overwrite  (bool, default=False):
         Whether to overrite the checkpoints if already downloaded.
 
     Returns

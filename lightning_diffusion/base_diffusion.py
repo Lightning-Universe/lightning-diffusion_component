@@ -119,7 +119,7 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
         if _TORCH_GREATER_EQUAL_1_12 and torch.backends.mps.is_available() and platform.processor() in ("arm", "arm64"):
             return torch.device("mps", local_rank)
         else:
-            return f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu"
+            return torch.device(f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu")
 
     @abc.abstractmethod
     def setup(self, *args, **kwargs):

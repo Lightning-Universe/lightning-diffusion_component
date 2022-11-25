@@ -18,6 +18,7 @@ from PIL import Image
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 from nicegui import ui
+import numpy as np
 import asyncio
 import functools
 

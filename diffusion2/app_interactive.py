@@ -31,7 +31,7 @@ def webpage(predict_fn: Callable, host: Optional[str] = None, port: Optional[int
     async def generate_image():
         image.source = "https://dummyimage.com/600x400/ccc/000000.png&text=building+image..."
         prediction = await io_bound(predict_fn, request=Text(text=prompt.value))
-        image.source = f"data:image/png;base64,{prediction['image']}"
+        image.source = prediction['image']
 
     # User Interface
     with ui.row().style("gap:10em"):

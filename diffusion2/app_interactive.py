@@ -1,15 +1,15 @@
 # !pip install Pillow
+# !pip install nicegui
 # !pip install 'git+https://github.com/Lightning-AI/stablediffusion.git@lit'
 # !curl https://raw.githubusercontent.com/Lightning-AI/stablediffusion/main/configs/stable-diffusion/v2-inference-v.yaml -o v2-inference-v.yaml
 import os
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Callable
 from pydantic import BaseModel
 from io import BytesIO
 import lightning as L
 import base64, torch
-import lightning.app.components.serve as serve
 from pathlib import Path
 from ldm.util import instantiate_from_config
 from ldm.models.diffusion.ddim import DDIMSampler
@@ -17,7 +17,9 @@ from omegaconf import OmegaConf
 from PIL import Image
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
-import numpy as np
+from nicegui import ui
+import asyncio
+import functools
 
 
 class Text(BaseModel):
@@ -81,7 +83,30 @@ class StableDiffusionModel(L.LightningModule):
         return pil_results
 
 
-class DiffusionServer(serve.PythonServer):
+async def io_bound(callback: Callable, *args: Any, **kwargs: Any):
+    '''Makes a blocking function awaitable; pass function as first parameter and its arguments as the rest'''
+    return await asyncio.get_event_loop().run_in_executor(None, functools.partial(callback, *args, **kwargs))
+
+
+def webpage(predict_fn, host: Optional[str] = None, port: Optional[int] = None):
+
+    async def generate_image():
+        image.source = 'https://dummyimage.com/600x400/ccc/000000.png&text=building+image...'
+        prediction = await io_bound(predict_fn.predict, data=Text(prompt=prompt.value))
+        image.source = f"data:image/png;base64,{prediction['image']}"
+
+    # User Interface
+    with ui.row().style('gap:10em'):
+        with ui.column():
+            ui.label('Stable Diffusion 2.0 with Lightning.AI').classes('text-2xl')
+            prompt = ui.input('prompt').style('width: 20em')
+            ui.button('Generate', on_click=generate_image).style('width: 15em')
+            image = ui.image().style('width: 60em')
+
+    ui.run(host=host, port=port, reload=False)
+
+
+class DiffusionServeInteractive(L.LightningWork):
 
     def setup(self):
         weights_folder = Path("resources/stable_diffusion_weights")
@@ -104,8 +129,11 @@ class DiffusionServer(serve.PythonServer):
         img_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
         return {"image": f"data:image/png;base64,{img_str}"}
 
-component = DiffusionServer(
-   input_type=Text, output_type=serve.Image, cloud_compute=L.CloudCompute('gpu-rtx')
-)
+    def run(self):
+        self.setup()
+        webpage(self.predict, host=self.host, port=self.port)
+
+
+component = DiffusionServeInteractive(cloud_compute=L.CloudCompute('gpu'))
 
 app = L.LightningApp(component)

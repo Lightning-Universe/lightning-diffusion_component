@@ -1,20 +1,16 @@
 # !pip install 'git+https://github.com/Lightning-AI/stablediffusion.git@lit'
 # !curl https://raw.githubusercontent.com/Lightning-AI/stablediffusion/main/configs/stable-diffusion/v2-inference.yaml -o v2-inference.yaml
+import lightning as L
 import os
-
-os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
-
-import base64
+import asyncio, torch, base64, functools
 from io import BytesIO
 from pathlib import Path
-from typing import Optional
-
-import lightning as L
-import lightning.app.components.serve as serve
-import torch
+from typing import Any, Callable, Optional
 from ldm.lightning import LightningStableDiffusion, PromptDataset
 from pydantic import BaseModel
-from torch.utils.data import DataLoader
+
+
+os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
 
 class Text(BaseModel):

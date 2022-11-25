@@ -26,14 +26,6 @@ import functools
 class Text(BaseModel):
     text: Optional[str]
 
-<<<<<<< HEAD
-    @staticmethod
-    def _get_sample_data() -> Dict[Any, Any]:
-        return {"text": "sample_data"}
-
-
-=======
->>>>>>> main
 class PromptDataset(Dataset):
     def __init__(self, prompts: List[str]):
         super().__init__()
@@ -56,10 +48,7 @@ class StableDiffusionModel(L.LightningModule):
         super().__init__()
 
         config = OmegaConf.load(f"{config_path}")
-<<<<<<< HEAD
-=======
         config.model.params.unet_config["params"]["use_fp16"] = False
->>>>>>> main
         config.model.params.cond_stage_config["params"] = {"device": device}
 
         checkpoint = torch.load(checkpoint_path, map_location="cpu")

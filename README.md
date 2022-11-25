@@ -44,9 +44,9 @@ from lightning_diffusion import BaseDiffusion, DreamBoothTuner, models, download
 class ServeDreamBoothDiffusion(BaseDiffusion):
     def setup(self):
         download_from_lightning_cloud("daniela/stable_diffusion", version="latest", output_dir="model")
-        self.model = StableDiffusionPipeline.from_pretrained(**models.get_kwargs("model", self.weights_drive)).to(
-            self.device
-        )
+        self.model = StableDiffusionPipeline.from_pretrained(
+            **models.get_kwargs("model", self.weights_drive)
+        ).to(self.device)
 
     def finetune(self):
         DreamBoothTuner(

@@ -50,9 +50,6 @@ def webpage(
 
 class DiffusionServeInteractive(L.LightningWork):
     def setup(self):
-        weights_folder = Path("resources/stable_diffusion_weights")
-        weights_folder.mkdir(parents=True, exist_ok=True)
-
         if not os.path.exists("checkpoint.ckpt"):
             os.system(
                 "curl https://pl-public-data.s3.amazonaws.com/dream_stable_diffusion/512-base-ema.ckpt -o checkpoint.ckpt"

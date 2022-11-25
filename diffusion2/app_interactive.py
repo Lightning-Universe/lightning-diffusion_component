@@ -1,6 +1,6 @@
 # !pip install nicegui
 # !pip install 'git+https://github.com/Lightning-AI/stablediffusion.git@lit'
-# !curl https://raw.githubusercontent.com/Lightning-AI/stablediffusion/main/configs/stable-diffusion/v2-inference-v.yaml -o v2-inference-v.yaml
+# !curl https://raw.githubusercontent.com/Lightning-AI/stablediffusion/main/configs/stable-diffusion/v2-inference.yaml -o v2-inference.yaml
 import os
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
@@ -58,7 +58,7 @@ class DiffusionServeInteractive(L.LightningWork):
         self._trainer = L.Trainer(accelerator="auto", devices=1, precision=precision, enable_progress_bar=False)
 
         self._model = LightningStableDiffusion(
-            config_path="v2-inference-v.yaml", checkpoint_path="checkpoint.ckpt", device=self._trainer.strategy.root_device.type
+            config_path="v2-inference.yaml", checkpoint_path="checkpoint.ckpt", device=self._trainer.strategy.root_device.type
         )
 
         if torch.cuda.is_available():

@@ -4,20 +4,21 @@
 import os
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel
-from io import BytesIO
-import lightning as L
-import base64, torch
-import lightning.app.components.serve as serve
-from pathlib import Path
-from ldm.util import instantiate_from_config
-from ldm.models.diffusion.ddim import DDIMSampler
-from omegaconf import OmegaConf
-from PIL import Image
-from torch.utils.data import DataLoader
-from torch.utils.data import Dataset
 import numpy as np
+from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
+from PIL import Image
+from omegaconf import OmegaConf
+from ldm.models.diffusion.ddim import DDIMSampler
+from ldm.util import instantiate_from_config
+from pathlib import Path
+import lightning.app.components.serve as serve
+import lightning as L
+from io import BytesIO
+from pydantic import BaseModel
+from typing import List, Optional, Dict, Any
+import base64
+import torch
 
 
 class Text(BaseModel):
@@ -96,6 +97,10 @@ class DiffusionServer(serve.PythonServer):
         self._model = StableDiffusionModel(
             config_path="v2-inference-v.yaml", checkpoint_path="checkpoint.ckpt", device=self._trainer.strategy.root_device.type
         )
+
+        if torch.cuda.is_available():
+            self._model = self._model.to(torch.float16)
+            torch.cuda.empty_cache()
 
     def predict(self, request):
         image = self._trainer.predict(self._model, DataLoader(PromptDataset([request.text])))[0][0]

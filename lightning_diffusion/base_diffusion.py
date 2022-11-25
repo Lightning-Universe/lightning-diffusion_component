@@ -16,7 +16,7 @@ from lightning_utilities.core.imports import compare_version
 
 from lightning_diffusion.diffusion_serve import DiffusionServe
 from lightning_diffusion.lite_finetuner import Finetuner
-from lightning_diffusion.diffusion_juspty import DiffusionFrontend
+from lightning_diffusion.diffusion_juspty import DiffusionServeJuspty
 
 
 def trimmed_flow(flow: "L.LightningFlow") -> "L.LightningFlow":
@@ -36,7 +36,6 @@ def trimmed_flow(flow: "L.LightningFlow") -> "L.LightningFlow":
 
 
 class LoadBalancer(L.LightningFlow):
-
     def __init__(self, server: L.LightningWork, num_replicas: int = 1):
         super().__init__()
         self.server = server
@@ -77,8 +76,6 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
                 cloud_compute=finetune_cloud_compute,
             )
 
-        self.load_balancer = None
-
         if not self.interactive:    
             self.load_balancer = LoadBalancer(
                 DiffusionServe(
@@ -90,7 +87,11 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
                 num_replicas=num_replicas,
             )
         else:
-            self.frontend = DiffusionFrontend()
+            self.load_balancer = DiffusionServeJuspty(
+                flow=_trimmed_flow,
+                cloud_compute=serve_cloud_compute,
+                start_with_flow=self.finetuner is None,
+            )
 
     @staticmethod
     def serialize(image):
@@ -135,14 +136,10 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
         if self.finetuner:
             self.finetuner.run()
             if self.finetuner.has_succeeded:
-                if self.load_balancer:
-                    self.load_balancer.run()
-        else:
-            if self.load_balancer:
                 self.load_balancer.run()
+        else:
+            self.load_balancer.run()
 
     def configure_layout(self):
-        if self.load_balancer:
-            return [{"name": "API", "content": self.load_balancer.url}]
-        else:
-            return [{"name": "Demo", "content": self.frontend}]
+        name = "Demo" if isinstance(self.load_balancer, DiffusionServeJuspty) else "API"
+        return [{"name": name, "content": self.load_balancer.url}]

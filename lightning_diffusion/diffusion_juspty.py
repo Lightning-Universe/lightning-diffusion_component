@@ -1,21 +1,38 @@
-#!/usr/bin/env python3
-import justpy as jp
-from lightning.app.components.serve.python_server import _PyTorchSpawnRunExecutor, WorkRunExecutor
 from lightning import LightningWork
 from nicegui import ui
+from typing import Optional
+import asyncio
+import functools
+from typing import Callable, Any
+from nicegui import ui
+from pydantic import BaseModel
 
-flow = None
+class DreamBoothInput(BaseModel):
+    prompt: str  # text prompt
 
-def my_click():
-    response = flow.predict()
-    print(response)
 
-def webpage(host, port):
-    ui.input(label='Text', placeholder='press ENTER to apply',
-            on_change=lambda e: input_result.set_text('you typed: ' + e.value))
-    input_result = ui.label()
+async def io_bound(callback: Callable, *args: Any, **kwargs: Any):
+    '''Makes a blocking function awaitable; pass function as first parameter and its arguments as the rest'''
+    return await asyncio.get_event_loop().run_in_executor(None, functools.partial(callback, *args, **kwargs))
+
+
+def webpage(flow, host: Optional[str] = None, port: Optional[int] = None):
+
+    async def generate_image():
+        image.source = 'https://dummyimage.com/600x400/ccc/000000.png&text=building+image...'
+        prediction = await io_bound(flow.predict, data=DreamBoothInput(prompt=prompt.value))
+        image.source = f"data:image/png;base64,{prediction['image']}"
+
+    # User Interface
+    with ui.row().style('gap:10em'):
+        with ui.column():
+            ui.label('Stable Diffusion 2.0 with Lightning.AI').classes('text-2xl')
+            prompt = ui.input('prompt').style('width: 20em')
+            ui.button('Generate', on_click=generate_image).style('width: 15em')
+            image = ui.image().style('width: 60em')
 
     ui.run(host=host, port=port, reload=False)
+
 
 class DiffusionServeJuspty(LightningWork):
 
@@ -23,15 +40,6 @@ class DiffusionServeJuspty(LightningWork):
         super().__init__(*args, flow, **kwargs)
         self._flow = flow
 
-        # Note: Enable to run inference on GPUs.
-        # self._run_executor_cls = (
-        #     WorkRunExecutor if os.getenv("LIGHTNING_CLOUD_APP_ID", None) else _PyTorchSpawnRunExecutor
-        # )
-
     def run(self):
-        global flow
-        flow = self._flow
-
         self._flow.setup()
-
-        webpage(host=self.host, port=self.port,)
+        webpage(self._flow, host=self.host, port=self.port)

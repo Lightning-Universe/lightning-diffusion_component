@@ -51,6 +51,7 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
         finetune_cloud_compute: Optional[L.CloudCompute] = L.CloudCompute("gpu-fast", disk_size=80),
         serve_cloud_compute: Optional[L.CloudCompute] = L.CloudCompute("gpu", disk_size=80),
         num_replicas=1,
+        gradio: bool = False,
     ):
         super().__init__()
         if not is_overridden("predict", instance=self, parent=BaseDiffusion):
@@ -59,6 +60,7 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
         self.weights_drive = Drive("lit://weights")
         self._model = None
         self._device = None
+        self.gradio = gradio
 
         _trimmed_flow = trimmed_flow(self)
 
@@ -121,4 +123,7 @@ class BaseDiffusion(L.LightningFlow, abc.ABC):
             self.load_balancer.run()
 
     def configure_layout(self):
-        return {"name": "API", "content": self.load_balancer.url}
+        tabs = [{"name": "API", "content": self.load_balancer.url}]
+        if self.gradio:
+            tabs += [{"name": "Demo", "content": None}]
+        return tabs

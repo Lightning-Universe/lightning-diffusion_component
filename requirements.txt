@@ -1,11 +1,11 @@
-torchvision==0.13.0
+torchvision
 jsonargparse[signatures]
 pyyaml==5.4.0
 protobuf<4.21.0
 Pillow>=2.9.0
 numpy>=1.9.2
-diffusers==0.8.0
-transformers==4.24.0
+diffusers>=0.8.0
+transformers>=4.24.0
 deepspeed
 ftfy
 lightning-api-access

@@ -1,11 +1,10 @@
 # !pip install nicegui
 # !pip install 'git+https://github.com/Lightning-AI/stablediffusion.git@lit'
-# !curl https://raw.githubusercontent.com/Lightning-AI/stablediffusion/main/configs/stable-diffusion/v2-inference.yaml -o v2-inference.yaml
+# !curl https://raw.githubusercontent.com/Lightning-AI/stablediffusion/main/configs/stable-diffusion/v2-inference-v.yaml -o v2-inference-v.yaml
 import lightning as L
 import os
 import asyncio, torch, base64, functools
 from io import BytesIO
-from pathlib import Path
 from typing import Any, Callable, Optional
 from ldm.lightning import LightningStableDiffusion, PromptDataset
 from nicegui import ui
@@ -49,11 +48,10 @@ def webpage(
 
 class DiffusionServeInteractive(L.LightningWork):
     def setup(self):
-        if not os.path.exists("checkpoint.ckpt"):
-            os.system(
-                "curl https://pl-public-data.s3.amazonaws.com/dream_stable_diffusion/512-base-ema.ckpt -o checkpoint.ckpt"
-            )
-            os.system("echo checkpoint.ckpt > .lightningignore ")
+        os.system(
+            "curl https://pl-public-data.s3.amazonaws.com/dream_stable_diffusion/768-v-ema.ckpt -o 768-v-ema.ckpt"
+        )
+        os.system("echo *.ckpt > .lightningignore ")
 
         running_local = os.getenv("LIGHTNING_CLOUD_APP_ID", None) is None
 
@@ -72,9 +70,10 @@ class DiffusionServeInteractive(L.LightningWork):
         )
 
         self._model = LightningStableDiffusion(
-            config_path="v2-inference.yaml",
-            checkpoint_path="checkpoint.ckpt",
+            config_path="v2-inference-v.yaml",
+            checkpoint_path="768-v-ema.ckpt",
             device=self._trainer.strategy.root_device.type,
+            size=768,
         )
 
         if not running_local and torch.cuda.is_available():

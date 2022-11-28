@@ -78,6 +78,38 @@ Reference Format: `A photo of [NOUN] [DESCRIPTIVE CLASS] [DESCRIPTION FOR THE NE
 
 Inspired from [here](https://github.com/ShivamShrirao/diffusers/blob/main/examples/dreambooth/train_dreambooth.py) and [here](https://colab.research.google.com/drive/1SyjkeuPrX7kd_xTBKhcvBGEC8G_ml9RU#scrollTo=1lKGmcIyJbCu).
 
+### Serve ANY Diffusion Models
+
+```python
+# ! pip install torch diffusers git+https://github.com/Lightning-AI/lightning-diffusion-component.git
+import diffusers
+import lightning as L
+from lightning.app.components import AutoScaler
+from lightning_diffusion import BaseDiffusion, download_from_lightning_cloud
+
+class ServeDiffusion(BaseDiffusion):
+    def setup(self, *args, **kwargs):
+        download_from_lightning_cloud(
+            "daniela/stable_diffusion", version="latest", output_dir="model")
+        self.model = diffusers.StableDiffusionPipeline.from_pretrained("model").to(self.device)
+
+    def predict(self, data):
+        out = self.model(prompt=data.prompt, num_inference_steps=23)
+        return {"image": self.serialize(out[0][0])}
+
+app = L.LightningApp(
+    AutoScaler(
+        ServeDiffusion,
+        max_replicas=8,
+        autoscale_interval=30,
+    )
+)
+```
+
+Run the component for free directly [there](https://lightning.ai/component/UJ7stJI225-Serve%20Dreambooth%20Diffusion).
+
+
+
 ### Running locally
 
 ```bash

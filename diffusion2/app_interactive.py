@@ -92,6 +92,8 @@ class DiffusionServeInteractive(L.LightningWork):
 
     def run(self):
         self.setup()
+        # Improve cold start by running a prediction before getting ready.
+        self.predict(Text(text="Woman painting a large red egg in a dali landscape"))
         webpage(self.predict, host=self.host, port=self.port)
 
 

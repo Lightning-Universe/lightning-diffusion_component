@@ -10,8 +10,8 @@ To get started, save this code snippet as `component.py` and run the below at th
 
 ```python
 # ! pip install torch diffusers git+https://github.com/Lightning-AI/lightning-diffusion-component.git
-import diffusers
 import lightning as L
+import diffusers
 from lightning_diffusion import BaseDiffusion, download_from_lightning_cloud
 
 

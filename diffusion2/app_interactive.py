@@ -34,6 +34,8 @@ def webpage(
         progress.value = round((progress.value * reference_inference_time + 0.1) / reference_inference_time, 3)
 
     async def generate_image():
+        nonlocal reference_inference_time
+        t0 = time.time()
         progress.value = 0.0001
         image.source = (
             "https://dummyimage.com/600x400/ccc/000000.png&text=building+image..."
@@ -41,6 +43,7 @@ def webpage(
         prediction = await io_bound(predict_fn, request=Text(text=prompt.value))
         image.source = prediction["image"]
         progress.value = 1.0
+        reference_inference_time = (time.time() - t0)
 
     # User Interface
     with ui.row().style("gap:10em"):
@@ -104,8 +107,8 @@ class DiffusionServeInteractive(L.LightningWork):
     def run(self):
         self.setup()
         t0 = time.time()
-        self.predict(Text(text='warm-up inference'))
-        webpage(self.predict, host=self.host, port=self.port, reference_inference_time=0.97 * (time.time() - t0))
+        self.predict(Text(text='Warm-up Machine'))
+        webpage(self.predict, host=self.host, port=self.port, reference_inference_time=(time.time() - t0))
 
 
 component = DiffusionServeInteractive(

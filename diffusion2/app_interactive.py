@@ -4,7 +4,7 @@
 import lightning as L
 import os
 import inspect
-import asyncio, torch, base64, functools
+import asyncio, torch, base64, functools, time
 from io import BytesIO
 from typing import Any, Callable, Optional
 from ldm.lightning import LightningStableDiffusion, PromptDataset
@@ -25,13 +25,12 @@ async def io_bound(callback: Callable, *args: Any, **kwargs: Any):
 
 
 def webpage(
-    predict_fn: Callable, host: Optional[str] = None, port: Optional[int] = None
+    predict_fn: Callable, host: str, port: int, reference_inference_time: float
 ):    
 
     async def progress_tracker():
         if progress.value >= 1.0 or progress.value == 0:
             return
-        reference_inference_time = float(os.getenv("REFERENCE_INFERENCE_TIME", 15.0))
         progress.value = round((progress.value * reference_inference_time + 0.1) / reference_inference_time, 3)
 
     async def generate_image():
@@ -104,7 +103,9 @@ class DiffusionServeInteractive(L.LightningWork):
 
     def run(self):
         self.setup()
-        webpage(self.predict, host=self.host, port=self.port)
+        t0 = time.time()
+        self.predict(Text(text='warm-up inference'))
+        webpage(self.predict, host=self.host, port=self.port, reference_inference_time=0.97 * (time.time() - t0))
 
 
 component = DiffusionServeInteractive(

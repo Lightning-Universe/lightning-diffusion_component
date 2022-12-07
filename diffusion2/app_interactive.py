@@ -26,7 +26,7 @@ async def io_bound(callback: Callable, *args: Any, **kwargs: Any):
 
 
 def webpage(
-    predict_fn: Callable, host: str, port: int, reference_inference_time: Optional[float]
+    predict_fn: Callable, host: str, port: int, reference_inference_time: Optional[float], source
 ):    
 
     async def progress_tracker():
@@ -56,6 +56,7 @@ def webpage(
             progress = ui.linear_progress()
             ui.timer(interval=0.1, callback=progress_tracker)
             image = ui.image().style("width: 60em")
+            image.source = source
 
     # Note: Hack to enable running in spawn context.
     def stack_patch():
@@ -109,8 +110,8 @@ class DiffusionServeInteractive(L.LightningWork):
     def run(self):
         self.setup()
         t0 = time.time()
-        self.predict(Text(text='Warm-up Machine'))
-        webpage(self.predict, host=self.host, port=self.port, reference_inference_time=time.time() - t0)
+        image = self.predict(Text(text='Woman painting a large red egg in a dali landscape'))["image"]
+        webpage(self.predict, self.host, self.port, time.time() - t0, image)
 
 
 component = DiffusionServeInteractive(

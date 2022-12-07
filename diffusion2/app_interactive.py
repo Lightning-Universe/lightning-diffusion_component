@@ -82,6 +82,7 @@ class DiffusionServeInteractive(L.LightningWork):
             devices=1,
             precision=16 if torch.cuda.is_available() else 32,
             enable_progress_bar=False,
+            inference_mode=torch.cuda.is_available(),
         )
 
         self._model = LightningStableDiffusion(

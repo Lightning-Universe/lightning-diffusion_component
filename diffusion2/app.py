@@ -25,12 +25,12 @@ class DiffusionServer(serve.PythonServer):
         )
         os.system("echo *.ckpt > .lightningignore ")
 
-        precision = 16 if torch.cuda.is_available() else 32
         self._trainer = L.Trainer(
             accelerator="auto",
             devices=1,
-            precision=precision,
+            precision=16 if torch.cuda.is_available() else 32,
             enable_progress_bar=False,
+            inference_mode=torch.cuda.is_available(),
         )
 
         self._model = LightningStableDiffusion(

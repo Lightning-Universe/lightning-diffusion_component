@@ -104,15 +104,11 @@ class DiffusionServeInteractive(L.LightningWork):
         img_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
         return {"image": f"data:image/png;base64,{img_str}"}
          
-    def warm_up(self):
-        self._model.steps = 1
-        self.predict(Text(text='Warm-up Machine'))
-        self._model.steps = 50
-
     def run(self):
         self.setup()
-        self.warm_up()
-        webpage(self.predict, host=self.host, port=self.port, reference_inference_time=15)
+        t0 = time.time()
+        self.predict(Text(text='Warm-up Machine'))
+        webpage(self.predict, host=self.host, port=self.port, reference_inference_time=time.time() - t0)
 
 
 component = DiffusionServeInteractive(

@@ -1,5 +1,6 @@
 # !pip install nicegui
 # !pip install 'git+https://github.com/Lightning-AI/stablediffusion.git@lit'
+# !pip install 'git+https://github.com/Lightning-AI/lightning.git@diffusion-component'
 # !curl https://raw.githubusercontent.com/Lightning-AI/stablediffusion/main/configs/stable-diffusion/v2-inference-v.yaml -o v2-inference-v.yaml
 import lightning as L
 import os

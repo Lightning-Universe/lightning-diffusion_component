@@ -23,16 +23,6 @@ def webpage(
     predict_fn: Callable, host: str, port: int, reference_inference_time: Optional[float], source: Optional[str]
 ):    
 
-    async def enhance_prompt():
-        openai.api_key = key_input.value
-        try:
-            value = str(prompt.value)
-            value = f"Describe the following '{value}' with details"
-            response = openai.Completion.create(model="text-davinci-003", prompt=value, max_tokens=80, temperature=0.7)
-        except openai.error.AuthenticationError:
-            return
-        prompt.value = response["choices"][0]["text"]
-
     async def progress_tracker():
         if progress.value >= 1.0 or progress.value == 0:
             return
@@ -56,12 +46,7 @@ def webpage(
             ui.label("Stable Diffusion 2.0 with Lightning AI").classes("text-2xl")
             prompt = ui.input("prompt").style("width: 50em")
             prompt.value = "a dragon with wings made of fire"
-            with ui.row().style("gap:10em"):
-                expander = ui.expansion('Enhance').style("width: 15em")
-                with expander:
-                    key_input = ui.input("Enter your OpenAI Key").style("width: 50em")
-                    ui.button("Enhance", on_click=enhance_prompt).style("width: 15em")
-                ui.button("Generate", on_click=generate_image).style("width: 15em")
+            ui.button("Generate", on_click=generate_image).style("width: 15em")
             progress = ui.linear_progress()
             ui.timer(interval=0.1, callback=progress_tracker)
             image = ui.image().style("width: 60em")
@@ -91,7 +76,7 @@ class DiffusionServeInteractive(L.LightningWork):
         self._trainer = L.Trainer(
             accelerator="auto",
             devices=1,
-            precision=16 if torch.cuda.is_available() else 32,
+            precision=16,
             enable_progress_bar=False,
             inference_mode=torch.cuda.is_available(),
         )

@@ -4,11 +4,11 @@
 
 
 import lightning as L
-import base64, io, os, torch
+import base64, io, os, torch, lightning_diffusion
 from ldm.lightning import LightningStableDiffusion, PromptDataset
 
 
-class ServeDiffusion(L.app.components.serve.PythonServer):
+class ServeDiffusion(lightning_diffusion.BaseDiffusion):
     def __init__(self, input_type=L.app.components.Text, output_type=L.app.components.Image, **kwargs):
         super().__init__(input_type=input_type, output_type=output_type, **kwargs)
         self._model = None

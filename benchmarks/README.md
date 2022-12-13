@@ -3,6 +3,7 @@
 ### 1.0
 
 Benchmarking version: 1.0
+
 Date: 13/12/2022
 
 |      **Device**       | **Server Type** | **Req/Sec** | **Latency** | **Batch Size** |

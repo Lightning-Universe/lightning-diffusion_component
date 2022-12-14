@@ -12,6 +12,8 @@ class DiffusionServer(L.app.components.PythonServer):
         super().__init__(
             input_type=BatchText,
             output_type=BatchResponse,
+            *args,
+            **kwargs,
         )
 
     def setup(self):
@@ -43,17 +45,20 @@ class DiffusionServer(L.app.components.PythonServer):
         for request in requests.inputs:
             texts.append(request.text)
 
-        image = self._trainer.predict(
+        images = self._trainer.predict(
             self._model,
             data.DataLoader(ldm.lightning.PromptDataset(texts), batch_size=batch_size),
-        )
-        print(image)
-        image = image[0][0]
-        print(image)
-        buffer = io.BytesIO()
-        image.save(buffer, format="PNG")
-        img_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
-        return {"image": img_str}
+        )[0]
+        print(images)
+        results = []
+        for image in images:
+            print(image)
+            buffer = io.BytesIO()
+            image.save(buffer, format="PNG")
+            image_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
+            results.append(image_str)
+
+        return BatchResponse(outputs=[{"image": image_str} for image_str in results])
 
 class Text(pydantic.BaseModel):
     text: str
@@ -69,13 +74,13 @@ class BatchResponse(pydantic.BaseModel):
 component = L.app.components.AutoScaler(
     # work cls and args
     DiffusionServer,
-    cloud_compute=L.CloudCompute("cpu-medium", disk_size=80),
+    cloud_compute=L.CloudCompute("gpu-rtx", disk_size=80),
     # autoscaler args
     min_replicas=1,
-    max_replicas=1,
+    max_replicas=3,
     endpoint="/predict",
     autoscale_interval=10,
-    max_batch_size=2,
+    max_batch_size=8,
     timeout_batching=3,
 )
 

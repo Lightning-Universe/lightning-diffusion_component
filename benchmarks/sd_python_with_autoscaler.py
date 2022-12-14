@@ -49,10 +49,8 @@ class DiffusionServer(L.app.components.PythonServer):
             self._model,
             data.DataLoader(ldm.lightning.PromptDataset(texts), batch_size=batch_size),
         )[0]
-        print(images)
         results = []
         for image in images:
-            print(image)
             buffer = io.BytesIO()
             image.save(buffer, format="PNG")
             image_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
@@ -64,11 +62,11 @@ class Text(pydantic.BaseModel):
     text: str
 
 class BatchText(pydantic.BaseModel):
-    # Note: field name must be `inputs` as of now
+    # Note: field name must be `inputs`
     inputs: typing.List[Text]
 
 class BatchResponse(pydantic.BaseModel):
-    # Note: field name must be `outputs`` as of now
+    # Note: field name must be `outputs`
     outputs: typing.List[L.app.components.Image]
 
 component = L.app.components.AutoScaler(

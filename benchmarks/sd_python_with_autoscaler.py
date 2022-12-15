@@ -80,6 +80,8 @@ component = L.app.components.AutoScaler(
     autoscale_interval=10,
     max_batch_size=8,
     timeout_batching=3,
+    input_type=Text,
+    output_type=L.app.components.Image,
 )
 
 app = L.LightningApp(component)

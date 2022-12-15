@@ -1,9 +1,19 @@
-# !pip install 'git+https://github.com/Lightning-AI/LAI-API-Access-UI-Component.git@diffusion'
+# !pip install lightning_api_access
 # !pip install 'git+https://github.com/Lightning-AI/stablediffusion.git@lit'
 # !curl https://raw.githubusercontent.com/Lightning-AI/stablediffusion/main/configs/stable-diffusion/v2-inference-v.yaml -o v2-inference-v.yaml
+from typing import Any
+
+import aiohttp
 import lightning as L
 import torch, torch.utils.data as data
-import os, base64, pydantic, io, ldm, typing
+import os, base64, io, ldm
+
+from pydantic import BaseModel
+
+from autoscaler import AutoScaler
+from cold_start_proxy import ColdStartProxy
+from datatypes import BatchText, BatchResponse
+
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
 
@@ -58,28 +68,42 @@ class DiffusionServer(L.app.components.PythonServer):
 
         return BatchResponse(outputs=[{"image": image_str} for image_str in results])
 
-class Text(pydantic.BaseModel):
-    text: str
 
-class BatchText(pydantic.BaseModel):
-    # Note: field name must be `inputs`
-    inputs: typing.List[Text]
+class CustomColdStartProxy(ColdStartProxy):
+    async def handle_request(self, request: BaseModel) -> Any:
+        try:
+            async with aiohttp.ClientSession() as session:
+                headers = {
+                    "accept": "application/json",
+                    "Content-Type": "application/json",
+                }
+                async with session.post(
+                        self.proxy_url,
+                        json=request.dict(),
+                        timeout=self.proxy_timeout,
+                        headers=headers,
+                ) as response:
+                    return response
+        except Exception as ex:
+            # TODO - exception raising
+            print(f"Error in proxy: {ex}")
+            return None
 
-class BatchResponse(pydantic.BaseModel):
-    # Note: field name must be `outputs`
-    outputs: typing.List[L.app.components.Image]
 
-component = L.app.components.AutoScaler(
+component = AutoScaler(
     # work cls and args
     DiffusionServer,
     cloud_compute=L.CloudCompute("gpu-rtx", disk_size=80),
     # autoscaler args
-    min_replicas=1,
+    min_replicas=0,
     max_replicas=3,
     endpoint="/predict",
-    autoscale_interval=10,
+    autoscale_interval=0,
     max_batch_size=8,
-    timeout_batching=3,
+    timeout_batching=2,
+    input_type=BatchText,
+    output_type=BatchResponse,
+    cold_start_proxy=CustomColdStartProxy(),
 )
 
 app = L.LightningApp(component)

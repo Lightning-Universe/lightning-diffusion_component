@@ -1,5 +1,5 @@
 # !pip install 'git+https://github.com/Lightning-AI/LAI-API-Access-UI-Component.git@diffusion'
-# !pip install 'git+https://github.com/Lightning-AI/stablediffusion.git@lit'
+# !pip install 'git+https://github.com/Lightning-AI/stablediffusion.git@lit-no-progressbar'
 # !curl https://raw.githubusercontent.com/Lightning-AI/stablediffusion/main/configs/stable-diffusion/v2-inference-v.yaml -o v2-inference-v.yaml
 import lightning as L
 import torch, torch.utils.data as data
@@ -41,10 +41,8 @@ class DiffusionServer(L.app.components.PythonServer):
     def predict(self, requests):
         batch_size = len(requests.inputs)
         print(f"predicting with batch size {batch_size}")
-        texts = []
-        for request in requests.inputs:
-            texts.append(request.text)
-
+        texts = [request.text for request in requests.inputs]
+        print(texts)
         images = self._trainer.predict(
             self._model,
             data.DataLoader(ldm.lightning.PromptDataset(texts), batch_size=batch_size),
@@ -75,7 +73,7 @@ component = L.app.components.AutoScaler(
     cloud_compute=L.CloudCompute("gpu-rtx", disk_size=80),
     # autoscaler args
     min_replicas=1,
-    max_replicas=3,
+    max_replicas=12,
     endpoint="/predict",
     autoscale_interval=10,
     max_batch_size=8,

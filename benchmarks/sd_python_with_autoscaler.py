@@ -33,10 +33,11 @@ class DiffusionServer(L.app.components.PythonServer):
         print(f"start predicting with batch size {batch_size}")
         print(texts)
 
-        images = self._model.predict_step(
-            prompts=texts,
-            batch_idx=0,  # or whatever
-        )
+        with torch.no_grad():
+            images = self._model.predict_step(
+                prompts=texts,
+                batch_idx=0,  # or whatever
+            )
 
         results = []
         for image in images:

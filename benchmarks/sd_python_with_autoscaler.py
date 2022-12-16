@@ -40,7 +40,7 @@ class DiffusionServer(L.app.components.PythonServer):
 
     def predict(self, requests):
         batch_size = len(requests.inputs)
-        print(f"predicting with batch size {batch_size}")
+        print(f"start predicting with batch size {batch_size}")
         texts = [request.text for request in requests.inputs]
         print(texts)
         images = self._trainer.predict(
@@ -53,7 +53,7 @@ class DiffusionServer(L.app.components.PythonServer):
             image.save(buffer, format="PNG")
             image_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
             results.append(image_str)
-
+        print(f"finish predicting with batch size {batch_size}")
         return BatchResponse(outputs=[{"image": image_str} for image_str in results])
 
 class Text(pydantic.BaseModel):

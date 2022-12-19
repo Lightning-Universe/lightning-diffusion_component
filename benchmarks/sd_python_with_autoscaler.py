@@ -22,9 +22,9 @@ class DiffusionServer(L.app.components.PythonServer):
 
         device = "cpu"
         if torch.cuda.is_available():
-            device = torch.device("cuda")
+            device = "cuda"
         elif torch.backends.mps.is_available():
-            device = torch.device("mps")
+            device = "mps"
 
         self._model = ldm.lightning.LightningStableDiffusion(
             config_path="v2-inference-v.yaml",

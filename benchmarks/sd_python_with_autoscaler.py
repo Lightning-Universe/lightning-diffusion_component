@@ -1,9 +1,8 @@
 # !pip install 'git+https://github.com/Lightning-AI/LAI-API-Access-UI-Component.git@diffusion'
-# !pip install 'git+https://github.com/Lightning-AI/stablediffusion.git@aki-no-trainer-inference'
+# !pip install 'git+https://github.com/Lightning-AI/stablediffusion.git@lit'
 # !curl https://raw.githubusercontent.com/Lightning-AI/stablediffusion/main/configs/stable-diffusion/v2-inference-v.yaml -o v2-inference-v.yaml
 import lightning as L
-import torch, torch.utils.data as data
-import os, base64, pydantic, io, ldm, typing
+import torch, os, base64, pydantic, io, ldm, typing
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
 
@@ -66,7 +65,7 @@ component = L.app.components.AutoScaler(
     endpoint="/predict",
     scale_out_interval=10,
     scale_in_interval=600,
-    max_batch_size=100,
+    max_batch_size=8,
     timeout_batching=1,
     input_type=L.app.components.Text,
     output_type=L.app.components.Image,

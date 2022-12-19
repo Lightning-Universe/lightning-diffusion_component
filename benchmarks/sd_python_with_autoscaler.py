@@ -20,11 +20,18 @@ class DiffusionServer(L.app.components.PythonServer):
         cmd = "curl -C - https://pl-public-data.s3.amazonaws.com/dream_stable_diffusion/768-v-ema.ckpt -o 768-v-ema.ckpt"
         os.system(cmd)
 
+        if torch.cuda.is_available():
+            device = torch.device("cuda")
+        elif torch.backends.mps.is_available():
+            device = torch.device("mps")
+        else:
+            device = torch.device("cpu")
+
         self._model = ldm.lightning.LightningStableDiffusion(
             config_path="v2-inference-v.yaml",
             checkpoint_path="768-v-ema.ckpt",
-            device="cuda",
-        ).to("cuda")
+            device=device,
+        ).to(device)
 
     def predict(self, requests):
         batch_size = len(requests.inputs)

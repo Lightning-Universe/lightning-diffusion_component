@@ -33,17 +33,11 @@ class DiffusionServer(L.app.components.PythonServer):
         ).to(device)
 
     def predict(self, requests):
-        batch_size = len(requests.inputs)
+        print(f"Predicting with batch size {len(requests.inputs)}")
         texts = [request.text for request in requests.inputs]
 
-        print(f"start predicting with batch size {batch_size}")
-        print(texts)
-
         with torch.no_grad():
-            images = self._model.predict_step(
-                prompts=texts,
-                batch_idx=0,  # or whatever
-            )
+            images = self._model.predict_step(prompts=texts, batch_idx=0)
 
         results = []
         for image in images:
@@ -52,15 +46,11 @@ class DiffusionServer(L.app.components.PythonServer):
             image_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
             results.append(image_str)
 
-        print(f"finish predicting with batch size {batch_size}")
         return BatchResponse(outputs=[{"image": image_str} for image_str in results])
-
-class Text(pydantic.BaseModel):
-    text: str
 
 class BatchText(pydantic.BaseModel):
     # Note: field name must be `inputs`
-    inputs: typing.List[Text]
+    inputs: typing.List[L.app.components.Text]
 
 class BatchResponse(pydantic.BaseModel):
     # Note: field name must be `outputs`
@@ -74,10 +64,11 @@ component = L.app.components.AutoScaler(
     min_replicas=1,
     max_replicas=12,
     endpoint="/predict",
-    autoscale_interval=10,
-    max_batch_size=8,
-    timeout_batching=3,
-    input_type=Text,
+    scale_out_interval=10,
+    scale_in_interval=600,
+    max_batch_size=100,
+    timeout_batching=1,
+    input_type=L.app.components.Text,
     output_type=L.app.components.Image,
 )
 

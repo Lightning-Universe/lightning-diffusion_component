@@ -57,12 +57,8 @@ class DreamBoothDataset(Dataset):
         # image transform
         self.image_transforms = transforms.Compose(
             [
-                transforms.Resize(
-                    size, interpolation=transforms.InterpolationMode.BILINEAR
-                ),
-                transforms.CenterCrop(size)
-                if center_crop
-                else transforms.RandomCrop(size),
+                transforms.Resize(size, interpolation=transforms.InterpolationMode.BILINEAR),
+                transforms.CenterCrop(size) if center_crop else transforms.RandomCrop(size),
                 transforms.ToTensor(),
                 transforms.Normalize([0.5], [0.5]),
             ]
@@ -81,9 +77,7 @@ class DreamBoothDataset(Dataset):
     def __getitem__(self, index):
         example = {}
         # load exaples of my concept
-        instance_image = Image.open(
-            self.instance_images_path[index % self.num_instance_images]
-        )
+        instance_image = Image.open(self.instance_images_path[index % self.num_instance_images])
 
         if not instance_image.mode == "RGB":
             instance_image = instance_image.convert("RGB")
@@ -96,9 +90,7 @@ class DreamBoothDataset(Dataset):
         # handle prior examples
         if self.class_data_root:
             # load prior examples
-            class_image = Image.open(
-                self.class_images_path[index % self.num_class_images]
-            )
+            class_image = Image.open(self.class_images_path[index % self.num_class_images])
             # make it RGB
             if not class_image.mode == "RGB":
                 class_image = class_image.convert("RGB")

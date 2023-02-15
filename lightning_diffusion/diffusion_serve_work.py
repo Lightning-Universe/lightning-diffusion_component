@@ -23,19 +23,9 @@ class DreamBoothOutput(BaseModel):
 
 class DiffusionServe(PythonServer):
     def __init__(
-        self,
-        parent_flow: LightningFlow,
-        host: Optional[str] = "127.0.0.1",
-        port: Optional[int] = 7777,
-        **kwargs
+        self, parent_flow: LightningFlow, host: Optional[str] = "127.0.0.1", port: Optional[int] = 7777, **kwargs
     ):
-        super().__init__(
-            host=host,
-            port=port,
-            input_type=DreamBoothInput,
-            output_type=DreamBoothOutput,
-            **kwargs
-        )
+        super().__init__(host=host, port=port, input_type=DreamBoothInput, output_type=DreamBoothOutput, **kwargs)
         self._parent_flow = parent_flow
 
     def setup(self, *args, **kwargs):

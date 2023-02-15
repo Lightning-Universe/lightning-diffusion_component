@@ -1,28 +1,30 @@
 # !pip install nicegui
 # !pip install 'git+https://github.com/Lightning-AI/stablediffusion.git@lit'
 # !curl https://raw.githubusercontent.com/Lightning-AI/stablediffusion/main/configs/stable-diffusion/v2-inference-v.yaml -o v2-inference-v.yaml
-import lightning as L
-import os
+import asyncio
+import base64
+import functools
 import inspect
-import asyncio, torch, base64, functools, time
+import os
+import time
 from io import BytesIO
 from typing import Any, Callable, Optional
+
+import lightning as L
+import torch
 from ldm.lightning import LightningStableDiffusion, PromptDataset
 from nicegui import ui
-import openai
 
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
+
 async def io_bound(callback: Callable, *args: Any, **kwargs: Any):
-    return await asyncio.get_event_loop().run_in_executor(
-        None, functools.partial(callback, *args, **kwargs)
-    )
+    return await asyncio.get_event_loop().run_in_executor(None, functools.partial(callback, *args, **kwargs))
 
 
 def webpage(
     predict_fn: Callable, host: str, port: int, reference_inference_time: Optional[float], source: Optional[str]
-):    
-
+):
     async def progress_tracker():
         if progress.value >= 1.0 or progress.value == 0:
             return
@@ -32,13 +34,11 @@ def webpage(
         nonlocal reference_inference_time
         t0 = time.time()
         progress.value = 0.0001
-        image.source = (
-            "https://dummyimage.com/600x400/ccc/000000.png&text=building+image..."
-        )
+        image.source = "https://dummyimage.com/600x400/ccc/000000.png&text=building+image..."
         prediction = await io_bound(predict_fn, text=prompt.value)
         image.source = prediction["image"]
         progress.value = 1.0
-        reference_inference_time = (time.time() - t0)
+        reference_inference_time = time.time() - t0
 
     # User Interface
     with ui.row().style("gap:10em"):
@@ -57,13 +57,14 @@ def webpage(
     def stack_patch():
         class FakeFrame:
             filename = "random"
+
         return [FakeFrame(), None]
+
     inspect.stack = stack_patch
     ui.run(host=host, port=port, reload=False)
 
 
 class DiffusionServeInteractive(L.LightningWork):
-
     _start_method = "spawn"
 
     def setup(self):
@@ -93,24 +94,21 @@ class DiffusionServeInteractive(L.LightningWork):
             torch.cuda.empty_cache()
 
     def predict(self, text):
-        image = self._trainer.predict(
-            self._model,
-            torch.utils.data.DataLoader(PromptDataset([text])),
-        )[0][0]
+        image = self._trainer.predict(self._model, torch.utils.data.DataLoader(PromptDataset([text])),)[
+            0
+        ][0]
         buffer = BytesIO()
         image.save(buffer, format="PNG")
         img_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
         return {"image": f"data:image/png;base64,{img_str}"}
-         
+
     def run(self):
         self.setup()
         t0 = time.time()
-        image = self.predict('a dragon with wings made of fire')["image"]
+        image = self.predict("a dragon with wings made of fire")["image"]
         webpage(self.predict, self.host, self.port, time.time() - t0, image)
 
 
-component = DiffusionServeInteractive(
-    cloud_compute=L.CloudCompute("gpu-rtx", disk_size=80)
-)
+component = DiffusionServeInteractive(cloud_compute=L.CloudCompute("gpu-rtx", disk_size=80))
 
 app = L.LightningApp(component)

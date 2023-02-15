@@ -13,20 +13,8 @@ class FlowLambdaWork(L.LightningWork):
 
 
 class Finetuner(LiteMultiNode):
-    def __init__(
-        self,
-        *args,
-        cloud_compute=L.CloudCompute("gpu-fast"),
-        num_nodes: int = 1,
-        **kwargs
-    ):
-        super().__init__(
-            *args,
-            work_cls=FlowLambdaWork,
-            num_nodes=num_nodes,
-            cloud_compute=cloud_compute,
-            **kwargs
-        )
+    def __init__(self, *args, cloud_compute=L.CloudCompute("gpu-fast"), num_nodes: int = 1, **kwargs):
+        super().__init__(*args, work_cls=FlowLambdaWork, num_nodes=num_nodes, cloud_compute=cloud_compute, **kwargs)
 
     @property
     def has_succeeded(self) -> bool:

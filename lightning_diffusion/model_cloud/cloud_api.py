@@ -6,13 +6,7 @@ import zipfile
 import requests
 
 from .save import _download_and_extract_data_to, get_linked_output_dir
-from .utils import (
-    LIGHTNING_CLOUD_URL,
-    LIGHTNING_STORAGE_DIR,
-    get_model_data,
-    split_name,
-    stage,
-)
+from .utils import LIGHTNING_CLOUD_URL, LIGHTNING_STORAGE_DIR, split_name, stage
 
 logging.basicConfig(level=logging.INFO)
 
@@ -43,9 +37,7 @@ def download_from_lightning_cloud(
     None
     """
     version = version or "latest"
-    username, model_name, version = split_name(
-        name, version=version, l_stage=stage.DOWNLOAD
-    )
+    username, model_name, version = split_name(name, version=version, l_stage=stage.DOWNLOAD)
 
     linked_output_dir = ""
     if not output_dir:
@@ -62,9 +54,7 @@ def download_from_lightning_cloud(
     if len(os.listdir(output_dir)) > 0 and not overwrite:
         return
 
-    response = requests.get(
-        f"{LIGHTNING_CLOUD_URL}/v1/models?name={username}/{model_name}&version={version}"
-    )
+    response = requests.get(f"{LIGHTNING_CLOUD_URL}/v1/models?name={username}/{model_name}&version={version}")
     assert response.status_code == 200, (
         f"Unable to download the model with name {name} and version {version}."
         " Maybe reach out to the model owner or check the arguments again?"
@@ -72,15 +62,13 @@ def download_from_lightning_cloud(
 
     download_url_response = json.loads(response.content)
     download_url = download_url_response["downloadUrl"]
-    meta_data = download_url_response["metadata"]
+    download_url_response["metadata"]
 
     logging.info(f"Downloading the model data for {name} to {output_dir} folder.")
     _download_and_extract_data_to(output_dir, download_url, progress_bar)
 
     if linked_output_dir:
-        logging.info(
-            f"Linking the downloaded folder from {output_dir} to {linked_output_dir} folder."
-        )
+        logging.info(f"Linking the downloaded folder from {output_dir} to {linked_output_dir} folder.")
         if os.path.islink(linked_output_dir):
             os.unlink(linked_output_dir)
         if os.path.exists(linked_output_dir):

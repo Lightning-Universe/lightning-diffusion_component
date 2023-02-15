@@ -1,15 +1,16 @@
 # !pip install 'git+https://github.com/Lightning-AI/LAI-API-Access-UI-Component.git@diffusion'
 # !pip install 'git+https://github.com/Lightning-AI/stablediffusion.git@lit'
 # !curl https://raw.githubusercontent.com/Lightning-AI/stablediffusion/main/configs/stable-diffusion/v2-inference-v.yaml -o v2-inference-v.yaml
-import lightning as L
-import lightning.app.components.serve as serve
+import base64
 import os
-import torch, base64
 from io import BytesIO
 from typing import Optional
+
+import lightning as L
+import lightning.app.components.serve as serve
+import torch
 from ldm.lightning import LightningStableDiffusion, PromptDataset
 from pydantic import BaseModel
-
 
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
@@ -45,10 +46,9 @@ class DiffusionServer(serve.PythonServer):
             torch.cuda.empty_cache()
 
     def predict(self, request):
-        image = self._trainer.predict(
-            self._model,
-            torch.utils.data.DataLoader(PromptDataset([request.text])),
-        )[0][0]
+        image = self._trainer.predict(self._model, torch.utils.data.DataLoader(PromptDataset([request.text])),)[
+            0
+        ][0]
         buffer = BytesIO()
         image.save(buffer, format="PNG")
         img_str = base64.b64encode(buffer.getvalue()).decode("utf-8")

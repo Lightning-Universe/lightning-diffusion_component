@@ -13,19 +13,13 @@ class DreamBoothInput(BaseModel):
 
 async def io_bound(callback: Callable, *args: Any, **kwargs: Any):
     """Makes a blocking function awaitable; pass function as first parameter and its arguments as the rest."""
-    return await asyncio.get_event_loop().run_in_executor(
-        None, functools.partial(callback, *args, **kwargs)
-    )
+    return await asyncio.get_event_loop().run_in_executor(None, functools.partial(callback, *args, **kwargs))
 
 
 def webpage(flow, host: Optional[str] = None, port: Optional[int] = None):
     async def generate_image():
-        image.source = (
-            "https://dummyimage.com/600x400/ccc/000000.png&text=building+image..."
-        )
-        prediction = await io_bound(
-            flow.predict, data=DreamBoothInput(prompt=prompt.value)
-        )
+        image.source = "https://dummyimage.com/600x400/ccc/000000.png&text=building+image..."
+        prediction = await io_bound(flow.predict, data=DreamBoothInput(prompt=prompt.value))
         image.source = f"data:image/png;base64,{prediction['image']}"
 
     # User Interface

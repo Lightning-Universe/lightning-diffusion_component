@@ -10,9 +10,7 @@ from tqdm import tqdm
 logging.basicConfig(level=logging.INFO)
 
 
-def _download_and_extract_data_to(
-    output_dir: str, download_url: str, progress_bar: bool
-):
+def _download_and_extract_data_to(output_dir: str, download_url: str, progress_bar: bool):
     def _common_clean_up():
         data_file_path = f"{output_dir}/data.tar.gz"
         dir_file_path = f"{output_dir}/extracted"
@@ -27,9 +25,7 @@ def _download_and_extract_data_to(
 
             download_progress_bar = None
             if progress_bar:
-                download_progress_bar = tqdm(
-                    total=total_size_in_bytes, unit="iB", unit_scale=True
-                )
+                download_progress_bar = tqdm(total=total_size_in_bytes, unit="iB", unit_scale=True)
             with open(f"{output_dir}/data.tar.gz", "wb") as f:
                 for chunk in req_stream.iter_content(chunk_size=block_size):
                     if download_progress_bar:

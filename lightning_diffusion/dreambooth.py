@@ -50,7 +50,6 @@ def collate_fn(examples, tokenizer, preservation_prompt):
 
 @dataclass
 class DreamBoothTuner:
-
     image_urls: List[str]
     prompt: str
     num_preservation_images: int = 100
@@ -150,9 +149,7 @@ class DreamBoothTuner:
 
                 with torch.no_grad():
                     # Convert images to latent space
-                    latents = model.vae.encode(
-                        batch["pixel_values"].to(lite.device, dtype=dtype)
-                    ).latent_dist.sample()
+                    latents = model.vae.encode(batch["pixel_values"].to(lite.device, dtype=dtype)).latent_dist.sample()
                     latents = latents * 0.18215
 
                 # Sample noise that we'll add to the latents
@@ -173,14 +170,10 @@ class DreamBoothTuner:
 
                 with torch.no_grad():
                     # Get the text embedding for conditioning
-                    encoder_hidden_states = model.text_encoder(
-                        batch["input_ids"].to(lite.device)
-                    )[0]
+                    encoder_hidden_states = model.text_encoder(batch["input_ids"].to(lite.device))[0]
 
                 # Predict the noise residual
-                noise_pred = model.unet(
-                    noisy_latents, timesteps, encoder_hidden_states
-                ).sample
+                noise_pred = model.unet(noisy_latents, timesteps, encoder_hidden_states).sample
 
                 if self.preservation_prompt:
                     # Chunk the noise and noise_pred into two parts and compute the loss on each part separately.
@@ -188,23 +181,15 @@ class DreamBoothTuner:
                     noise, noise_prior = torch.chunk(noise, 2, dim=0)
 
                     # Compute instance loss
-                    loss = (
-                        F.mse_loss(noise_pred.float(), noise.float(), reduction="none")
-                        .mean([1, 2, 3])
-                        .mean()
-                    )
+                    loss = F.mse_loss(noise_pred.float(), noise.float(), reduction="none").mean([1, 2, 3]).mean()
 
                     # Compute prior loss
-                    prior_loss = F.mse_loss(
-                        noise_pred_prior.float(), noise_prior.float(), reduction="mean"
-                    )
+                    prior_loss = F.mse_loss(noise_pred_prior.float(), noise_prior.float(), reduction="mean")
 
                     # Add the prior loss to the instance loss.
                     loss = loss + self.prior_loss_weight * prior_loss
                 else:
-                    loss = F.mse_loss(
-                        noise_pred.float(), noise.float(), reduction="mean"
-                    )
+                    loss = F.mse_loss(noise_pred.float(), noise.float(), reduction="mean")
 
                 lite.backward(loss)
 
@@ -264,10 +249,7 @@ class DreamBoothTuner:
 
         if self.scale_lr:
             self.learning_rate = (
-                self.learning_rate
-                * self.gradient_accumulation_steps
-                * self.train_batch_size
-                * world_size
+                self.learning_rate * self.gradient_accumulation_steps * self.train_batch_size * world_size
             )
 
         # # Use 8-bit Adam for lower memory usage or to fine-tune the model in 16GB GPUs
@@ -281,9 +263,7 @@ class DreamBoothTuner:
 
         unet = model.unet
 
-        model.unet, optimizer = lite.setup(
-            unet, optimizer
-        )  # Scale your model / optimizers
+        model.unet, optimizer = lite.setup(unet, optimizer)  # Scale your model / optimizers
 
         dtype = torch.float32
         if self.precision == 16:
@@ -302,9 +282,7 @@ class DreamBoothTuner:
         train_dataset = DreamBoothDataset(
             instance_data_root=self.user_images_data_dir,
             instance_prompt=self.prompt,
-            class_data_root=self.preservation_images_data_dir
-            if self.preservation_prompt
-            else None,
+            class_data_root=self.preservation_images_data_dir if self.preservation_prompt else None,
             class_prompt=self.preservation_prompt,
             tokenizer=model.tokenizer,
             size=self.resolution,
@@ -348,12 +326,9 @@ class DreamBoothTuner:
                 print(f"The image from {image_url} doesn't exist.")
 
     def _generate_preservation_images(self, lite: LightningLite, model):
-
         os.makedirs(self.preservation_images_data_dir, exist_ok=True)
 
-        sample_dataset = PromptDataset(
-            self.preservation_prompt, self.num_preservation_images
-        )
+        sample_dataset = PromptDataset(self.preservation_prompt, self.num_preservation_images)
         sample_dataloader = torch.utils.data.DataLoader(
             sample_dataset,
             batch_size=2,
@@ -375,9 +350,7 @@ class DreamBoothTuner:
                 images = model(example["prompt"]).images
 
             for image in images:
-                path = os.path.join(
-                    self.preservation_images_data_dir, f"{counter + L}.jpg"
-                )
+                path = os.path.join(self.preservation_images_data_dir, f"{counter + L}.jpg")
                 image.save(path)
                 counter += 1
 
@@ -396,9 +369,7 @@ class DreamBoothTuner:
         model.safety_checker = None
 
         with torch.inference_mode():
-            images = model(
-                self.validation_prompt, num_images_per_prompt=self.num_images_per_prompt
-            ).images
+            images = model(self.validation_prompt, num_images_per_prompt=self.num_images_per_prompt).images
 
             for image in images:
                 path = os.path.join(self.validation_images_data_dir, f"{counter}.jpg")

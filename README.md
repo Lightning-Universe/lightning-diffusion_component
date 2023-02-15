@@ -17,8 +17,12 @@ from lightning_diffusion import BaseDiffusion, download_from_lightning_cloud
 
 class ServeDiffusion(BaseDiffusion):
     def setup(self, *args, **kwargs):
-        download_from_lightning_cloud("daniela/stable_diffusion", version="latest", output_dir="model")
-        self.model = diffusers.StableDiffusionPipeline.from_pretrained("model").to(self.device)
+        download_from_lightning_cloud(
+            "daniela/stable_diffusion", version="latest", output_dir="model"
+        )
+        self.model = diffusers.StableDiffusionPipeline.from_pretrained("model").to(
+            self.device
+        )
 
     def predict(self, data):
         out = self.model(prompt=data.prompt, num_inference_steps=23)
@@ -38,12 +42,19 @@ Use the DreamBooth fine-tuning methodology from the paper \`Fine Tuning Text-to-
 # ! pip install torch diffusers lightning==1.8.3.post0 git+https://github.com/Lightning-AI/lightning-diffusion-component.git
 import lightning as L
 from diffusers import StableDiffusionPipeline
-from lightning_diffusion import BaseDiffusion, DreamBoothTuner, models, download_from_lightning_cloud
+from lightning_diffusion import (
+    BaseDiffusion,
+    DreamBoothTuner,
+    models,
+    download_from_lightning_cloud,
+)
 
 
 class ServeDreamBoothDiffusion(BaseDiffusion):
     def setup(self):
-        download_from_lightning_cloud("daniela/stable_diffusion", version="latest", output_dir="model")
+        download_from_lightning_cloud(
+            "daniela/stable_diffusion", version="latest", output_dir="model"
+        )
         self.model = StableDiffusionPipeline.from_pretrained(
             **models.get_kwargs("model", self.weights_drive)
         ).to(self.device)
